@@ -1,0 +1,91 @@
+[gd_scene format=3 uid="uid://hhnye7lex5fp"]
+
+[ext_resource type="Script" uid="uid://bv5cf6eq1mwhj" path="res://scenes/login/SceneLogin.gd" id="1_48hx4"]
+
+[node name="SceneLogin" type="Control" unique_id=2066539802]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_48hx4")
+metadata/_edit_use_anchors_ = true
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=110022458]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.101960786, 0.18039216, 0.101960786, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1284393357]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="PanelContainer" type="PanelContainer" parent="CenterContainer" unique_id=853881016]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/PanelContainer" unique_id=1769986711]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer" unique_id=1414349889]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="GreenMetric" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1867588416]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "🌿 GreenMetric URBE"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1444262706]
+layout_mode = 2
+
+[node name="Inicia sesion" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=178593689]
+layout_mode = 2
+text = "Inicia sesión para continuar"
+horizontal_alignment = 1
+
+[node name="EmailInput" type="LineEdit" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1809629327]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+placeholder_text = "Correo electrónico"
+
+[node name="PasswordInput" type="LineEdit" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1307754041]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Contraseña"
+
+[node name="BotonLogin" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1317287354]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Ingresar al Campus"
+
+[node name="BotonRegistro" type="Button" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=662886173]
+unique_name_in_owner = true
+layout_mode = 2
+text = "¿No tienes cuenta? Regístrate"
+flat = true
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=2009895735]
+layout_mode = 2
+
+[node name="MensajeLabel" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=560187336]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(1, 0)
+layout_mode = 2
+autowrap_mode = 2

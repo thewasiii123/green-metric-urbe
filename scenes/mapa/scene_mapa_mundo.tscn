@@ -1,0 +1,138 @@
+[gd_scene format=3 uid="uid://cu5qtkpl5qtnm"]
+
+[ext_resource type="Script" uid="uid://cx6yitcghrgg6" path="res://scenes/mapa/SceneMapaMundo.gd" id="1_td5n8"]
+[ext_resource type="Script" uid="uid://bik0k6opoj4hn" path="res://scenes/mapa/jugador.gd" id="2_mbwk1"]
+[ext_resource type="Texture2D" uid="uid://bc60twg2ghtpb" path="res://assets/sprites/mapa_campus_urbe.png" id="2_wxtnl"]
+[ext_resource type="Script" uid="uid://cvhbmuguojd6t" path="res://scenes/mapa/zonas_campus.gd" id="4_mrfj7"]
+
+[sub_resource type="TileSet" id="TileSet_2pyuy"]
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_vjhch"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_vjhch"]
+height = 20.0
+
+[node name="SceneMapaMundo" type="Node2D" unique_id=1186606235]
+script = ExtResource("1_td5n8")
+
+[node name="FondoCampus" type="Sprite2D" parent="." unique_id=1259727306]
+position = Vector2(-576, 0)
+texture = ExtResource("2_wxtnl")
+centered = false
+
+[node name="MapaCampus" type="TileMapLayer" parent="." unique_id=1180690893]
+tile_set = SubResource("TileSet_2pyuy")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=526675983]
+
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer" unique_id=703634044]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/PanelContainer" unique_id=95908450]
+layout_mode = 2
+
+[node name="LabelNombre" type="Label" parent="CanvasLayer/PanelContainer/HBoxContainer" unique_id=770093685]
+layout_mode = 2
+text = "Estudiante"
+
+[node name="LabelXP" type="Label" parent="CanvasLayer/PanelContainer/HBoxContainer" unique_id=1695111441]
+layout_mode = 2
+text = "XP: 0"
+
+[node name="PanelZona" type="PanelContainer" parent="CanvasLayer" unique_id=848494551]
+offset_left = 300.0
+offset_top = 520.0
+offset_right = 340.0
+offset_bottom = 560.0
+
+[node name="LabelZona" type="Label" parent="CanvasLayer/PanelZona" unique_id=887753093]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="Jugador" type="CharacterBody2D" parent="." unique_id=715230581]
+position = Vector2(200, 200)
+script = ExtResource("2_mbwk1")
+
+[node name="Sprite2D" type="Sprite2D" parent="Jugador" unique_id=559542128]
+texture = SubResource("PlaceholderTexture2D_vjhch")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Jugador" unique_id=633072535]
+shape = SubResource("CapsuleShape2D_vjhch")
+
+[node name="Camera2D" type="Camera2D" parent="Jugador" unique_id=2073784339]
+
+[node name="ZonasCampus" type="Node2D" parent="." unique_id=260216334]
+script = ExtResource("4_mrfj7")
+
+[node name="ZonaEstacionamiento" type="Area2D" parent="ZonasCampus" unique_id=29776783]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaEstacionamiento" unique_id=619049340]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaEstacionamiento" unique_id=1048063423]
+
+[node name="ZonaCafetin" type="Area2D" parent="ZonasCampus" unique_id=1779328589]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaCafetin" unique_id=204722151]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaCafetin" unique_id=636747837]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZonaBiblioteca" type="Area2D" parent="ZonasCampus" unique_id=1126428762]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaBiblioteca" unique_id=858420490]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaBiblioteca" unique_id=490360791]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZonaBloqueE" type="Area2D" parent="ZonasCampus" unique_id=1470512906]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaBloqueE" unique_id=975917626]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaBloqueE" unique_id=374884729]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZonaBloqueF" type="Area2D" parent="ZonasCampus" unique_id=1316785374]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaBloqueF" unique_id=1748535924]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaBloqueF" unique_id=1642252097]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZonaPlazaCentral" type="Area2D" parent="ZonasCampus" unique_id=1170131780]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaPlazaCentral" unique_id=418413012]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaPlazaCentral" unique_id=87980026]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZonaBloques_ABCD" type="Area2D" parent="ZonasCampus" unique_id=1278149924]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaBloques_ABCD" unique_id=959166241]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaBloques_ABCD" unique_id=1101987753]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZonaRectorado" type="Area2D" parent="ZonasCampus" unique_id=1414411892]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaRectorado" unique_id=1430451143]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaRectorado" unique_id=477983395]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZonaServicios" type="Area2D" parent="ZonasCampus" unique_id=337121769]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaServicios" unique_id=1484343790]
+
+[node name="Label" type="Label" parent="ZonasCampus/ZonaServicios" unique_id=328885660]
+offset_right = 40.0
+offset_bottom = 23.0
