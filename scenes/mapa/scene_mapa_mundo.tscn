@@ -3,20 +3,176 @@
 [ext_resource type="Script" uid="uid://cx6yitcghrgg6" path="res://scenes/mapa/SceneMapaMundo.gd" id="1_td5n8"]
 [ext_resource type="Script" uid="uid://bik0k6opoj4hn" path="res://scenes/mapa/jugador.gd" id="2_mbwk1"]
 [ext_resource type="Texture2D" uid="uid://bc60twg2ghtpb" path="res://assets/sprites/mapa_campus_urbe.png" id="2_wxtnl"]
+[ext_resource type="Texture2D" uid="uid://x78l2jsmdinu" path="res://assets/sprites/eco_ranger_spritesheet.png" id="4_cpu1u"]
 [ext_resource type="Script" uid="uid://cvhbmuguojd6t" path="res://scenes/mapa/zonas_campus.gd" id="4_mrfj7"]
+[ext_resource type="Script" uid="uid://cihynlskdl05h" path="res://scenes/mapa/limite_mundo.gd" id="6_cpu1u"]
+[ext_resource type="Script" uid="uid://xpk4p3iovie1" path="res://scenes/mapa/colisiones_edificios.gd" id="7_b6lp1"]
 
 [sub_resource type="TileSet" id="TileSet_2pyuy"]
 
-[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_vjhch"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_b6lp1"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(0, 0, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_grnhl"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(0, 144, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mjte8"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(0, 96, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6slg8"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(0, 48, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_e014t"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(0, 0, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s71rq"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(32, 0, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_e0ko0"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(64, 0, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qq1hk"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(0, 144, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hro05"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(32, 144, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nybfg"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(64, 144, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_w2o51"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(0, 96, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_amjj7"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(32, 96, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kbtdn"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(64, 96, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_keqcv"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(0, 48, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_81ftr"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(32, 48, 32, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5fju1"]
+atlas = ExtResource("4_cpu1u")
+region = Rect2(64, 48, 32, 48)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_vjhch"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_b6lp1")
+}],
+"loop": 1,
+"name": &"idle_abajo",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_grnhl")
+}],
+"loop": 1,
+"name": &"idle_arriba",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mjte8")
+}],
+"loop": 1,
+"name": &"idle_derecha",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6slg8")
+}],
+"loop": 1,
+"name": &"idle_izquierda",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_e014t")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s71rq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_e0ko0")
+}],
+"loop": 1,
+"name": &"walk_abajo",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qq1hk")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_hro05")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_nybfg")
+}],
+"loop": 1,
+"name": &"walk_arriba",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_w2o51")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_amjj7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kbtdn")
+}],
+"loop": 1,
+"name": &"walk_derecha",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_keqcv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_81ftr")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5fju1")
+}],
+"loop": 1,
+"name": &"walk_izquierda",
+"speed": 5.0
+}]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_vjhch"]
+radius = 8.0
 height = 20.0
 
 [node name="SceneMapaMundo" type="Node2D" unique_id=1186606235]
 script = ExtResource("1_td5n8")
 
 [node name="FondoCampus" type="Sprite2D" parent="." unique_id=1259727306]
-position = Vector2(-576, 0)
 texture = ExtResource("2_wxtnl")
 centered = false
 
@@ -54,8 +210,10 @@ autowrap_mode = 2
 position = Vector2(200, 200)
 script = ExtResource("2_mbwk1")
 
-[node name="Sprite2D" type="Sprite2D" parent="Jugador" unique_id=559542128]
-texture = SubResource("PlaceholderTexture2D_vjhch")
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Jugador" unique_id=703972680]
+sprite_frames = SubResource("SpriteFrames_vjhch")
+animation = &"walk_izquierda"
+speed_scale = 8.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Jugador" unique_id=633072535]
 shape = SubResource("CapsuleShape2D_vjhch")
@@ -65,74 +223,8 @@ shape = SubResource("CapsuleShape2D_vjhch")
 [node name="ZonasCampus" type="Node2D" parent="." unique_id=260216334]
 script = ExtResource("4_mrfj7")
 
-[node name="ZonaEstacionamiento" type="Area2D" parent="ZonasCampus" unique_id=29776783]
+[node name="LimiteMundo" type="StaticBody2D" parent="." unique_id=95619807]
+script = ExtResource("6_cpu1u")
 
-[node name="Label" type="Label" parent="ZonasCampus/ZonaEstacionamiento" unique_id=619049340]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaEstacionamiento" unique_id=1048063423]
-
-[node name="ZonaCafetin" type="Area2D" parent="ZonasCampus" unique_id=1779328589]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaCafetin" unique_id=204722151]
-
-[node name="Label" type="Label" parent="ZonasCampus/ZonaCafetin" unique_id=636747837]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="ZonaBiblioteca" type="Area2D" parent="ZonasCampus" unique_id=1126428762]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaBiblioteca" unique_id=858420490]
-
-[node name="Label" type="Label" parent="ZonasCampus/ZonaBiblioteca" unique_id=490360791]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="ZonaBloqueE" type="Area2D" parent="ZonasCampus" unique_id=1470512906]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaBloqueE" unique_id=975917626]
-
-[node name="Label" type="Label" parent="ZonasCampus/ZonaBloqueE" unique_id=374884729]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="ZonaBloqueF" type="Area2D" parent="ZonasCampus" unique_id=1316785374]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaBloqueF" unique_id=1748535924]
-
-[node name="Label" type="Label" parent="ZonasCampus/ZonaBloqueF" unique_id=1642252097]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="ZonaPlazaCentral" type="Area2D" parent="ZonasCampus" unique_id=1170131780]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaPlazaCentral" unique_id=418413012]
-
-[node name="Label" type="Label" parent="ZonasCampus/ZonaPlazaCentral" unique_id=87980026]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="ZonaBloques_ABCD" type="Area2D" parent="ZonasCampus" unique_id=1278149924]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaBloques_ABCD" unique_id=959166241]
-
-[node name="Label" type="Label" parent="ZonasCampus/ZonaBloques_ABCD" unique_id=1101987753]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="ZonaRectorado" type="Area2D" parent="ZonasCampus" unique_id=1414411892]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaRectorado" unique_id=1430451143]
-
-[node name="Label" type="Label" parent="ZonasCampus/ZonaRectorado" unique_id=477983395]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="ZonaServicios" type="Area2D" parent="ZonasCampus" unique_id=337121769]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ZonasCampus/ZonaServicios" unique_id=1484343790]
-
-[node name="Label" type="Label" parent="ZonasCampus/ZonaServicios" unique_id=328885660]
-offset_right = 40.0
-offset_bottom = 23.0
+[node name="ColisionesEdificios" type="Node2D" parent="." unique_id=193079496]
+script = ExtResource("7_b6lp1")
