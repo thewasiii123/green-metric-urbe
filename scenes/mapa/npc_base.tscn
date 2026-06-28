@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/mapa/npc.gd" id="1_npcgd"]
+[ext_resource type="Texture2D" uid="uid://x78l2jsmdinu" path="res://assets/sprites/eco_ranger_spritesheet.png" id="2_sheet"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_base"]
+radius = 60.0
+
+[node name="NPC" type="Area2D"]
+script = ExtResource("1_npcgd")
+
+[node name="Visual" type="Sprite2D" parent="."]
+texture = ExtResource("2_sheet")
+region_enabled = true
+region_rect = Rect2(0, 0, 32, 48)
+offset = Vector2(0, -24)
+
+[node name="Deteccion" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_base")

@@ -1,12 +1,14 @@
-[gd_scene format=3 uid="uid://cu5qtkpl5qtnm"]
+﻿[gd_scene format=3 uid="uid://cu5qtkpl5qtnm"]
 
 [ext_resource type="Script" uid="uid://cx6yitcghrgg6" path="res://scenes/mapa/SceneMapaMundo.gd" id="1_td5n8"]
 [ext_resource type="Script" uid="uid://bik0k6opoj4hn" path="res://scenes/mapa/jugador.gd" id="2_mbwk1"]
-[ext_resource type="Texture2D" uid="uid://bc60twg2ghtpb" path="res://assets/sprites/mapa_campus_urbe.png" id="2_wxtnl"]
+[ext_resource type="Script" path="res://scenes/mapa/mapa_campus.gd" id="2_wxtnl"]
 [ext_resource type="Texture2D" uid="uid://x78l2jsmdinu" path="res://assets/sprites/eco_ranger_spritesheet.png" id="4_cpu1u"]
 [ext_resource type="Script" uid="uid://cvhbmuguojd6t" path="res://scenes/mapa/zonas_campus.gd" id="4_mrfj7"]
 [ext_resource type="Script" uid="uid://cihynlskdl05h" path="res://scenes/mapa/limite_mundo.gd" id="6_cpu1u"]
-[ext_resource type="Script" uid="uid://xpk4p3iovie1" path="res://scenes/mapa/colisiones_edificios.gd" id="7_b6lp1"]
+[ext_resource type="Script" path="res://scenes/mapa/colision_tilemap.gd" id="7_b6lp1"]
+
+[ext_resource type="PackedScene" path="res://scenes/ui/dialogo_npc.tscn" id="9_dlgnpc"]
 
 [sub_resource type="TileSet" id="TileSet_2pyuy"]
 
@@ -168,13 +170,16 @@ animations = [{
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_vjhch"]
 radius = 8.0
 height = 20.0
+[sub_resource type="CircleShape2D" id="CircleShape2D_npc01"]
+radius = 60.0
+
 
 [node name="SceneMapaMundo" type="Node2D" unique_id=1186606235]
 script = ExtResource("1_td5n8")
 
-[node name="FondoCampus" type="Sprite2D" parent="." unique_id=1259727306]
-texture = ExtResource("2_wxtnl")
-centered = false
+[node name="FondoCampus" type="Node2D" parent="." unique_id=1259727306]
+z_index = -1
+script = ExtResource("2_wxtnl")
 
 [node name="MapaCampus" type="TileMapLayer" parent="." unique_id=1180690893]
 tile_set = SubResource("TileSet_2pyuy")
@@ -207,7 +212,8 @@ layout_mode = 2
 autowrap_mode = 2
 
 [node name="Jugador" type="CharacterBody2D" parent="." unique_id=715230581]
-position = Vector2(200, 200)
+position = Vector2(694, 650)
+z_index = 2
 script = ExtResource("2_mbwk1")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Jugador" unique_id=703972680]
@@ -226,5 +232,9 @@ script = ExtResource("4_mrfj7")
 [node name="LimiteMundo" type="StaticBody2D" parent="." unique_id=95619807]
 script = ExtResource("6_cpu1u")
 
-[node name="ColisionesEdificios" type="Node2D" parent="." unique_id=193079496]
+[node name="ColisionEdificios" type="TileMapLayer" parent="."]
 script = ExtResource("7_b6lp1")
+
+
+
+[node name="DialogoNPC" parent="." instance=ExtResource("9_dlgnpc")]

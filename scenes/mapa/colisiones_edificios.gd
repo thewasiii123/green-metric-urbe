@@ -1,55 +1,50 @@
 # ============================================================
-# ColisionesEdificios.gd
-# Crea StaticBody2D invisibles sobre cada edificio del mapa.
-# El jugador choca con ellos pero no los atraviesa.
-# Adjunta este script al nodo "ColisionesEdificios" (Node2D).
+# colisiones_edificios.gd - URBE Rangers: Eco-Quest
+# Colisiones calibradas sobre la imagen real del campus URBE.
+# Mapa: 1408 x 768 px
+# Formato: [nombre, centro_x, centro_y, ancho, alto]
 # ============================================================
 extends Node2D
 
-# ── Datos de colisión por edificio ───────────────────────────
-# Formato: [nombre, centro_x, centro_y, ancho, alto]
-# Estas son las bases/pies de los edificios (zona caminable bloqueada)
-# La colisión cubre solo la BASE del edificio, no el techo visual
-
 const EDIFICIOS : Array = [
-	# Edificios superiores (zona decorativa del lago — bloqueada completa)
-	["LimiteLago",       450,   80,  1050,  160],   # toda la franja del lago
+	# Zona superior: lago y puente (no transitable)
+	["LimiteLago",       704,   85,  1408,  170],
+	["LagoBordeIzq",      75,  200,   150,  200],
 
-	# Edificios principales
-	["ColRectorado",     711,  230,   190,   60],
-	["ColBloqueA",       263,  330,   140,   60],
-	["ColBloqueC",       471,  240,   110,   55],
-	["ColBloqueB",       566,  370,   145,   55],
-	["ColBloqueD",       820,  355,   145,   55],
-	["ColBloqueE",       942,  245,   165,   55],
-	["ColBloqueF",       612,  415,   122,   50],
-	["ColBloqueG",      1203,  248,   178,   55],
-	["ColBiblioteca",    960,  395,   172,   50],
-	["ColAuditorio",     193,  465,   210,   60],
+	# Edificios principales (calibrados sobre imagen real)
+	["ColBiblioteca",    680,  245,   220,  140],
+	["ColBloqueE",       937,  222,   145,  135],
+	["ColBloqueF",      1227,  420,   215,  240],
+	["ColEstacion",      231,  377,   246,  155],
+	["ColFotocopiado",   189,  465,   102,   90],
+	["ColBloqueB",       570,  400,   129,   90],
+	["ColBloqueD",       834,  391,   122,   92],
+	["ColBloqueA",       444,  492,   121,   85],
+	["ColBloqueC",       834,  486,   122,   82],
+	["ColBloqueG",       575,  654,   142,   92],
+	["ColRectorado",     889,  640,   232,  156],
+	["ColAreaServicios", 1258,  640,   257,  160],
 
-	# Bordes exteriores de tierra / acantilado (impiden salirse)
-	["BordeSuperior",    704,   10,  1408,   20],
-	["BordeInferior",    704,  760,  1408,   20],
-	["BordeIzquierdo",    10,  384,    20,  768],
-	["BordeDerecho",    1398,  384,    20,  768],
-
-	# Zona del lago izquierda (barco decorativo — no transitable)
-	["ColLagoIzq",       120,  160,   240,  200],
+	# Bordes del mundo
+	["BordeSuperior",    704,    5,  1408,   10],
+	["BordeInferior",    704,  763,  1408,   10],
+	["BordeIzquierdo",     5,  384,    10,  768],
+	["BordeDerecho",    1403,  384,    10,  768],
 ]
 
 
 func _ready() -> void:
 	for datos in EDIFICIOS:
 		_crear_colision(datos[0], datos[1], datos[2], datos[3], datos[4])
-	print("✅ %d colisiones de edificios creadas" % EDIFICIOS.size())
+	print("OK %d colisiones creadas" % EDIFICIOS.size())
 
 
-func _crear_colision(nombre: String, cx: float, cy: float, w: float, h: float) -> void:
+func _crear_colision(nombre: String, cx: float, cy: float, ancho: float, alto: float) -> void:
 	var body      := StaticBody2D.new()
 	body.name      = nombre
 	var cs        := CollisionShape2D.new()
 	var rect      := RectangleShape2D.new()
-	rect.size      = Vector2(w, h)
+	rect.size      = Vector2(ancho, alto)
 	cs.position    = Vector2(cx, cy)
 	cs.shape       = rect
 	body.add_child(cs)
