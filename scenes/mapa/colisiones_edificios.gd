@@ -12,18 +12,18 @@ const EDIFICIOS : Array = [
 	["LagoBordeIzq",      75,  200,   150,  200],
 
 	# Edificios principales (calibrados sobre imagen real)
-	["ColBiblioteca",    680,  245,   220,  140],
+	["ColBiblioteca",    680,  240,   220,  128],   # fondo recortado → libera camino horizontal medio
 	["ColBloqueE",       937,  222,   145,  135],
-	["ColBloqueF",      1227,  420,   215,  240],
+	["ColBloqueF",      1245,  420,   180,  240],   # borde izq recortado → libera camino vertical derecho
 	["ColEstacion",      231,  377,   246,  155],
 	["ColFotocopiado",   189,  465,   102,   90],
-	["ColBloqueB",       570,  400,   129,   90],
-	["ColBloqueD",       834,  391,   122,   92],
-	["ColBloqueA",       444,  492,   121,   85],
-	["ColBloqueC",       834,  486,   122,   82],
-	["ColBloqueG",       575,  654,   142,   92],
-	["ColRectorado",     889,  640,   232,  156],
-	["ColAreaServicios", 1258,  640,   257,  160],
+	["ColBloqueB",       592,  400,    84,   90],   # borde izq recortado → libera camino vertical central
+	["ColBloqueD",       834,  395,   122,   85],   # techo recortado → libera camino horizontal medio
+	["ColBloqueA",       444,  484,   121,   68],   # fondo recortado → libera avenida principal
+	["ColBloqueC",       834,  482,   122,   72],   # fondo recortado → libera avenida principal
+	["ColBloqueG",       598,  654,    96,   92],   # borde izq recortado → libera camino vertical central
+	["ColRectorado",     889,  650,   232,  136],   # techo recortado → libera avenida principal
+	["ColAreaServicios", 1258,  651,   257,  138],  # techo recortado → libera avenida principal
 
 	# Bordes del mundo
 	["BordeSuperior",    704,    5,  1408,   10],

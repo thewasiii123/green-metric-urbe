@@ -8,23 +8,29 @@ extends TileMapLayer
 const TS : int = 16  # tamaño de tile en píxeles
 
 # [centro_x, centro_y, ancho, alto] en píxeles
+# Valores alineados a cuadrícula 16px.
+# Caminos: izq x=192-240, centro x=416-464, der x=1104-1152, top y=176-208, avda y=704-768
+# Pasillo fila 1→2: y=368-400 (32px)   Pasillo fila 2→3: y=576-608 (32px)
 const EDIFICIOS : Array = [
-	# Zona lago superior (completamente bloqueada)
-	[704,    85,  1408,  170],
-	[ 75,   200,   150,  200],
-	# Edificios del campus
-	[680,   245,   220,  140],   # Biblioteca
-	[937,   222,   145,  135],   # Bloque E
-	[1227,  420,   215,  240],   # Bloque F
-	[231,   377,   246,  155],   # Estacionamiento M5
-	[189,   465,   102,   90],   # Centro Fotocopiado
-	[570,   400,   129,   90],   # Bloque B
-	[834,   391,   122,   92],   # Bloque D
-	[444,   492,   121,   85],   # Bloque A
-	[834,   486,   122,   82],   # Bloque C
-	[575,   654,   142,   92],   # Bloque G
-	[889,   640,   232,  156],   # Rectorado
-	[1258,  640,   257,  160],   # Área de Servicios
+	# Lago y orilla  y=0..160
+	[704,  80, 1408, 160],
+	# Fila 1  y=208..368
+	[96,  288,  192, 160],   # Estacionamiento M5  x=0..192
+	[328, 288,  176, 160],   # Cafetín M3          x=240..416
+	[568, 288,  208, 160],   # Biblioteca M4       x=464..672
+	[768, 288,  160, 160],   # Bloque E M2         x=688..848
+	# Bloque F  y=208..576 (ocupa fila 1 y 2 en el lado derecho)
+	[1280, 392, 256, 368],   # Bloque F M1         x=1152..1408
+	# Fila 2  y=400..576  (pasillo 32px arriba y abajo)
+	[96,  488,  192, 176],   # Bloque G M1         x=0..192
+	[328, 488,  176, 176],   # Bloque D M2         x=240..416
+	[552, 488,  176, 176],   # Bloque A M2         x=464..640
+	[744, 488,  176, 176],   # Bloque B M2         x=656..832
+	# Fila 3  y=608..704  (pasillo 32px arriba, avenida abajo)
+	[72,  656,  144,  96],   # Fotocopiado M1      x=0..144
+	[320, 656,  160,  96],   # Bloque C M2         x=240..400
+	[672, 656,  416,  96],   # Rectorado M6        x=464..880
+	[1280, 656, 256,  96],   # Área Servicios M6   x=1152..1408
 ]
 
 var _source_id : int = 0

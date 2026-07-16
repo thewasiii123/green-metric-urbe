@@ -1,79 +1,717 @@
+# ============================================================
+# SceneLogin.gd — GreenMetric URBE
+# Tres paneles: Login | Registro | Recuperar contraseña
+# Diseño: fondo animado, glassmorphism, tweens, spinner
+# ============================================================
 extends Control
 
-@onready var email_input   : LineEdit = %EmailInput
-@onready var password_input: LineEdit = %PasswordInput
-@onready var boton_login   : Button   = %BotonLogin
-@onready var boton_registro: Button   = %BotonRegistro
-@onready var mensaje_label : Label    = %MensajeLabel
+# ── Nodos del .tscn ──────────────────────────────────────────
+@onready var _email_in  : LineEdit        = %EmailInput
+@onready var _pass_in   : LineEdit        = %PasswordInput
+@onready var _btn_login : Button          = %BotonLogin
+@onready var _btn_reg   : Button          = %BotonRegistro
+@onready var _msg_login : Label           = %MensajeLabel
+@onready var _center    : CenterContainer = $CenterContainer
+@onready var _bg_rect   : ColorRect       = $ColorRect
+
+# ── Panel Registro ────────────────────────────────────────────
+var _panel_reg   : Control  = null
+var _reg_nombre  : LineEdit = null
+var _reg_cedula  : LineEdit = null
+var _reg_email   : LineEdit = null
+var _reg_carrera : OptionButton = null
+var _reg_semestre: OptionButton = null
+var _reg_pass    : LineEdit = null
+var _reg_confirm : LineEdit = null
+var _btn_crear   : Button   = null
+var _msg_reg     : Label    = null
+
+# ── Panel Recuperar ───────────────────────────────────────────
+var _panel_rec   : Control  = null
+var _rec_email   : LineEdit = null
+var _btn_enviar  : Button   = null
+var _msg_rec     : Label    = null
+
+# ── Estado ───────────────────────────────────────────────────
+var _cargando       : bool  = false
+var _tween_panel    : Tween = null
+var _spinner_label  : Label = null
+var _spinner_chars  : Array = ["◐","◓","◑","◒"]
+var _spinner_idx    : int   = 0
+var _spinner_timer  : float = 0.0
+
+# ── Animación logo ────────────────────────────────────────────
+var _logo_node  : Node2D = null
+var _logo_time  : float  = 0.0
 
 
+# ════════════════════════════════════════════════════════════
+# INNER CLASS — Fondo animado con partículas flotantes
+# Todos los valores de Dictionary se castean a float explícitamente
+# para evitar el error "Cannot infer type from Variant".
+# ════════════════════════════════════════════════════════════
+class BackgroundNode extends Node2D:
+	var _t    : float          = 0.0
+	var _orbs : Array          = []
+	var _hex  : Array[Vector2] = []   # tipado → p.x / p.y son float
+
+	func _ready() -> void:
+		var sz := Vector2(1280.0, 720.0)
+		for _i in 50:
+			_orbs.append(_rand_orb(sz, true))
+		var cols : int = int(sz.x / 48.0) + 1
+		var rows : int = int(sz.y / 40.0) + 1
+		for gy in rows:
+			for gx in cols:
+				_hex.append(Vector2(gx * 48.0 + (gy % 2) * 24.0, gy * 40.0))
+
+	func _rand_orb(sz: Vector2, init: bool = false) -> Dictionary:
+		return {
+			"x"   : randf_range(0.0, sz.x),
+			"y"   : randf_range(0.0, sz.y) if init else sz.y + 16.0,
+			"vy"  : randf_range(-28.0, -10.0),
+			"vx"  : randf_range(-4.0, 4.0),
+			"r"   : randf_range(2.0, 8.5),
+			"ph"  : randf_range(0.0, TAU),
+			"sp"  : randf_range(0.5, 1.7),
+			"leaf": (randi() % 4 != 0),
+		}
+
+	func _process(delta: float) -> void:
+		_t += delta
+		var sz := get_viewport_rect().size
+		for i in _orbs.size():
+			var o : Dictionary = _orbs[i]
+			o["y"] = float(o["y"]) + float(o["vy"]) * delta
+			o["x"] = float(o["x"]) + float(o["vx"]) * delta \
+					 + sin(_t * float(o["sp"]) + float(o["ph"])) * 0.25
+			if float(o["y"]) < -20.0:
+				_orbs[i] = _rand_orb(sz)
+		queue_redraw()
+
+	func _draw() -> void:
+		# Puntos de cuadrícula — _hex es Array[Vector2], p.x/p.y son float
+		for p : Vector2 in _hex:
+			var a : float = 0.04 + 0.02 * sin(_t * 0.4 + p.x * 0.01 + p.y * 0.02)
+			draw_circle(p, 1.2, Color(0.20, 0.72, 0.32, a))
+
+		# Partículas flotantes — cast explícito de valores Variant
+		for o in _orbs:
+			var sp  : float = float(o["sp"])
+			var ph  : float = float(o["ph"])
+			var ox  : float = float(o["x"])
+			var oy  : float = float(o["y"])
+			var r   : float = float(o["r"])
+			var a   : float = 0.06 + 0.04 * sin(_t * sp + ph)
+			var col := Color(0.22, 0.82, 0.36, a)
+			var pos := Vector2(ox, oy)
+			if bool(o["leaf"]):
+				var ang : float = _t * sp * 0.28 + ph
+				var d   := Vector2(cos(ang), sin(ang)) * r * 0.5
+				draw_arc(pos + d, r * 0.85, ang, ang + PI,  10, col, 1.3)
+				draw_arc(pos - d, r * 0.85, ang + PI, ang + TAU, 10, col, 1.3)
+			else:
+				draw_circle(pos, r, col)
+				draw_arc(pos, r, 0.0, TAU, 12, col.lightened(0.3), 0.8)
+
+
+# ════════════════════════════════════════════════════════════
+# INNER CLASS — Logo animado con hoja giratoria
+# ════════════════════════════════════════════════════════════
+class LogoNode extends Node2D:
+	var _t : float = 0.0
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		var puls : float = 1.0 + 0.06 * sin(_t * 2.2)
+		var ga   : float = 0.12 + 0.06 * sin(_t * 1.8)
+		var glow := Color(0.20, 0.78, 0.30, ga)
+		# Halo exterior — valores float literales, sin loop sobre Variant
+		draw_circle(Vector2.ZERO, 22.0 * puls, glow)
+		draw_circle(Vector2.ZERO, 18.0 * puls, glow)
+		draw_circle(Vector2.ZERO, 14.0 * puls, glow)
+		# Hoja principal
+		var ang : float = _t * 0.6
+		var d1  := Vector2(cos(ang) * 5.0, sin(ang) * 5.0)
+		draw_arc( d1, 10.0 * puls, ang, ang + PI * 1.1, 16, Color(0.22, 0.88, 0.35, 0.90), 2.2)
+		draw_arc(-d1, 10.0 * puls, ang, ang + PI * 1.1, 16, Color(0.22, 0.88, 0.35, 0.90), 2.2)
+		# Centro
+		draw_circle(Vector2.ZERO, 4.5 * puls, Color(0.38, 1.0, 0.50, 0.95))
+		draw_circle(Vector2.ZERO, 2.5,        Color(0.12, 0.44, 0.18, 1.0))
+
+
+# ════════════════════════════════════════════════════════════
+# READY
+# ════════════════════════════════════════════════════════════
 func _ready() -> void:
-	print("✅ SceneLogin lista")
-	
-	# Conectar señales de Supabase
+	# Fondo oscuro y partículas
+	_bg_rect.color = Color(0.030, 0.065, 0.033, 1.0)
+	var bg := BackgroundNode.new()
+	add_child(bg)
+	move_child(bg, 1)   # entre ColorRect y CenterContainer
+
+	# Señales Supabase
 	SupabaseManager.login_exitoso.connect(_en_login_exitoso)
 	SupabaseManager.login_fallido.connect(_en_login_fallido)
+	SupabaseManager.registro_exitoso.connect(_en_registro_exitoso)
+	SupabaseManager.registro_fallido.connect(_en_registro_fallido)
+	SupabaseManager.recuperacion_enviada.connect(_en_recuperacion_enviada)
+	SupabaseManager.recuperacion_fallida.connect(_en_recuperacion_fallida)
 	SupabaseManager.error_red.connect(_en_error_red)
-	
-	# Limpiar mensaje inicial
-	mensaje_label.text = ""
-	
-	# Conectar botones
-	boton_login.pressed.connect(_on_boton_login_pressed)
-	boton_registro.pressed.connect(_on_boton_registro_pressed)
+
+	_pass_in.secret = true
+	_msg_login.text = ""
+
+	# Estilizar panel login (nodos del .tscn)
+	_aplicar_estilo_panel_tscn()
+
+	# Botón "¿Olvidaste tu contraseña?"
+	var btn_olvide := _btn_link("¿Olvidaste tu contraseña?",
+								Color(0.40, 0.72, 1.0))
+	var vlogin := _btn_reg.get_parent() as VBoxContainer
+	vlogin.add_child(btn_olvide)
+	vlogin.move_child(btn_olvide, _btn_reg.get_index() + 1)
+
+	# Spinner de carga
+	_spinner_label = Label.new()
+	_spinner_label.text = ""
+	_spinner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_spinner_label.add_theme_font_size_override("font_size", 22)
+	_spinner_label.add_theme_color_override("font_color", Color(0.35, 0.92, 0.46))
+	_spinner_label.visible = false
+	vlogin.add_child(_spinner_label)
+
+	# Conexiones botones login
+	_btn_login.pressed.connect(_on_login_pressed)
+	_btn_reg.pressed.connect(func(): _cambiar_panel("registro"))
+	btn_olvide.pressed.connect(func(): _cambiar_panel("recuperar"))
+
+	# Hover en botón principal
+	_btn_login.mouse_entered.connect(func():
+		if not _cargando: _escalar_btn(_btn_login, 1.04))
+	_btn_login.mouse_exited.connect(func():
+		_escalar_btn(_btn_login, 1.0))
+
+	_crear_panel_registro()
+	_crear_panel_recuperacion()
+	_cambiar_panel("login")
 
 
-func _on_boton_login_pressed() -> void:
-	print("🔘 Botón login presionado")
-	
-	var email    : String = email_input.text.strip_edges()
-	var password : String = password_input.text
-	
-	if email.is_empty() or password.is_empty():
-		_mostrar_mensaje("⚠ Completa todos los campos.", Color.YELLOW)
-		return
-	
-	if not email.contains("@"):
-		_mostrar_mensaje("⚠ El correo no es válido.", Color.YELLOW)
-		return
-	
-	_set_cargando(true)
-	_mostrar_mensaje("Conectando...", Color.WHITE)
-	print("📡 Enviando login: " + email)
-	
-	SupabaseManager.login(email, password)
+func _process(delta: float) -> void:
+	if not _cargando: return
+	_spinner_timer += delta
+	if _spinner_timer >= 0.17:
+		_spinner_timer = 0.0
+		_spinner_idx = (_spinner_idx + 1) % _spinner_chars.size()
+		if is_instance_valid(_spinner_label):
+			_spinner_label.text = _spinner_chars[_spinner_idx]
 
 
-func _on_boton_registro_pressed() -> void:
-	_mostrar_mensaje("Registro próximamente.", Color.CYAN)
+# ════════════════════════════════════════════════════════════
+# ESTILOS VISUALES
+# ════════════════════════════════════════════════════════════
+func _aplicar_estilo_panel_tscn() -> void:
+	# Panel container del .tscn
+	var pc := _center.get_child(0) as PanelContainer
+	if pc: pc.add_theme_stylebox_override("panel", _style_panel())
+
+	# Logo con animación — insertarlo en el vbox del .tscn
+	var vlogin := _btn_login.get_parent() as VBoxContainer
+	var logo_ctrl := _crear_logo_widget()
+	vlogin.add_child(logo_ctrl)
+	vlogin.move_child(logo_ctrl, 0)
+
+	# Título original del .tscn (index 1 ahora, porque logo va al 0)
+	var titulo := vlogin.get_child(1) as Label
+	if titulo:
+		titulo.add_theme_font_size_override("font_size", 22)
+		titulo.add_theme_color_override("font_color", Color(0.35, 0.95, 0.50))
+
+	# Subtítulo "Inicia sesión..." (index 3)
+	var sub := vlogin.get_child(3) as Label
+	if sub:
+		sub.add_theme_color_override("font_color", Color(0.52, 0.68, 0.55))
+		sub.add_theme_font_size_override("font_size", 11)
+
+	_estilizar_input(_email_in)
+	_estilizar_input(_pass_in)
+	_estilizar_btn_primario(_btn_login)
+
+	_btn_reg.flat = true
+	_btn_reg.add_theme_color_override("font_color", Color(0.40, 0.85, 0.52))
+	_btn_reg.add_theme_font_size_override("font_size", 11)
+
+	_msg_login.add_theme_font_size_override("font_size", 12)
+	_msg_login.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
-func _en_login_exitoso(_datos: Dictionary) -> void:
-	print("✅ Login exitoso - UID: " + SupabaseManager.user_id)
+func _crear_logo_widget() -> Control:
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(60, 60)
+
+	var logo := LogoNode.new()
+	logo.position = Vector2(c.custom_minimum_size.x * 0.5, c.custom_minimum_size.y * 0.5)
+	c.add_child(logo)
+
+	c.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	return c
+
+
+func _style_panel() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color     = Color(0.055, 0.105, 0.062, 0.93)
+	sb.border_color = Color(0.22, 0.70, 0.30, 0.80)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(16)
+	sb.shadow_color  = Color(0.08, 0.50, 0.16, 0.50)
+	sb.shadow_size   = 14
+	sb.shadow_offset = Vector2(0, 5)
+	sb.content_margin_left   = 26
+	sb.content_margin_right  = 26
+	sb.content_margin_top    = 22
+	sb.content_margin_bottom = 22
+	return sb
+
+
+func _estilizar_input(le: LineEdit) -> void:
+	le.custom_minimum_size = Vector2(290, 40)
+
+	var sb_n := StyleBoxFlat.new()
+	sb_n.bg_color     = Color(0.075, 0.130, 0.082, 0.96)
+	sb_n.border_color = Color(0.18, 0.42, 0.22, 0.65)
+	sb_n.set_border_width_all(1)
+	sb_n.set_corner_radius_all(9)
+	sb_n.content_margin_left   = 12
+	sb_n.content_margin_right  = 12
+	sb_n.content_margin_top    = 8
+	sb_n.content_margin_bottom = 8
+	le.add_theme_stylebox_override("normal", sb_n)
+
+	var sb_f := sb_n.duplicate() as StyleBoxFlat
+	sb_f.border_color = Color(0.28, 0.85, 0.42, 1.0)
+	sb_f.set_border_width_all(2)
+	sb_f.shadow_color = Color(0.18, 0.72, 0.32, 0.30)
+	sb_f.shadow_size  = 7
+	le.add_theme_stylebox_override("focus", sb_f)
+
+	le.add_theme_color_override("font_color",             Color(0.90, 0.97, 0.92))
+	le.add_theme_color_override("font_placeholder_color", Color(0.38, 0.52, 0.41))
+	le.add_theme_color_override("caret_color",            Color(0.35, 0.92, 0.46))
+	le.add_theme_font_size_override("font_size", 13)
+
+
+func _estilizar_btn_primario(btn: Button) -> void:
+	btn.custom_minimum_size = Vector2(290, 44)
+	btn.pivot_offset = btn.size * 0.5
+
+	var mk := func(bg: Color) -> StyleBoxFlat:
+		var s := StyleBoxFlat.new()
+		s.bg_color     = bg
+		s.border_color = Color(0.28, 0.80, 0.38, 0.75)
+		s.set_border_width_all(1)
+		s.set_corner_radius_all(11)
+		s.shadow_color  = Color(0.10, 0.50, 0.18, 0.45)
+		s.shadow_size   = 7
+		s.content_margin_top    = 10
+		s.content_margin_bottom = 10
+		return s
+
+	btn.add_theme_stylebox_override("normal",  mk.call(Color(0.12, 0.50, 0.21)))
+	btn.add_theme_stylebox_override("hover",   mk.call(Color(0.17, 0.64, 0.27)))
+	btn.add_theme_stylebox_override("pressed", mk.call(Color(0.08, 0.36, 0.14)))
+	btn.add_theme_color_override("font_color", Color.WHITE)
+	btn.add_theme_font_size_override("font_size", 14)
+
+
+func _estilizar_option(ob: OptionButton) -> void:
+	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ob.add_theme_color_override("font_color", Color(0.85, 0.95, 0.87))
+	ob.add_theme_font_size_override("font_size", 12)
+
+
+func _escalar_btn(btn: Button, escala: float) -> void:
+	var tw := create_tween().set_ease(Tween.EASE_OUT)
+	tw.tween_property(btn, "scale", Vector2(escala, escala), 0.12)
+
+
+func _btn_link(texto: String, col: Color) -> Button:
+	var b := Button.new()
+	b.text = texto
+	b.flat = true
+	b.add_theme_color_override("font_color", col)
+	b.add_theme_font_size_override("font_size", 11)
+	return b
+
+
+# ════════════════════════════════════════════════════════════
+# PANEL REGISTRO
+# ════════════════════════════════════════════════════════════
+func _crear_panel_registro() -> void:
+	var vbox := _nuevo_panel()
+
+	_titulo(vbox, "Crear Cuenta")
+	_lbl_sec(vbox, "Datos personales")
+
+	_reg_nombre = _campo(vbox, "Nombre completo *")
+	_reg_cedula = _campo(vbox, "Cédula (ej. V-12345678) *")
+
+	_lbl_sec(vbox, "Información académica")
+	_lbl(vbox, "Carrera:")
+	_reg_carrera = OptionButton.new()
+	for c in ["Ingeniería en Computación", "Ingeniería Industrial",
+			  "Ingeniería Eléctrica", "Ingeniería de Telecomunicaciones",
+			  "Arquitectura", "Administración de Empresas",
+			  "Contaduría Pública", "Comunicación Social",
+			  "Derecho", "Educación", "Psicología", "Medicina", "Otra"]:
+		_reg_carrera.add_item(c)
+	_estilizar_option(_reg_carrera)
+	vbox.add_child(_reg_carrera)
+
+	_lbl(vbox, "Semestre:")
+	_reg_semestre = OptionButton.new()
+	for i in range(1, 11):
+		_reg_semestre.add_item("Semestre %d" % i)
+	_estilizar_option(_reg_semestre)
+	vbox.add_child(_reg_semestre)
+
+	_lbl_sec(vbox, "Acceso")
+	_reg_email   = _campo(vbox, "Correo electrónico *")
+	_reg_pass    = _campo(vbox, "Contraseña (mín. 6 caracteres) *", true)
+	_reg_confirm = _campo(vbox, "Confirmar contraseña *", true)
+
+	vbox.add_child(HSeparator.new())
+
+	_btn_crear = Button.new()
+	_btn_crear.text = "Crear cuenta"
+	_estilizar_btn_primario(_btn_crear)
+	_btn_crear.mouse_entered.connect(func(): _escalar_btn(_btn_crear, 1.04))
+	_btn_crear.mouse_exited.connect(func(): _escalar_btn(_btn_crear, 1.0))
+	vbox.add_child(_btn_crear)
+	_btn_crear.pressed.connect(_on_registro_pressed)
+
+	var btn_volver_reg := _btn_link("← Volver al login", Color(0.40, 0.72, 1.0))
+	vbox.add_child(btn_volver_reg)
+	btn_volver_reg.pressed.connect(func(): _cambiar_panel("login"))
+
+	vbox.add_child(HSeparator.new())
+	_msg_reg = _make_msg(); vbox.add_child(_msg_reg)
+
+	add_child(_panel_reg)
+
+
+# ════════════════════════════════════════════════════════════
+# PANEL RECUPERAR CONTRASEÑA
+# ════════════════════════════════════════════════════════════
+func _crear_panel_recuperacion() -> void:
+	var vbox := _nuevo_panel()
+
+	_titulo(vbox, "Recuperar Contraseña")
+	vbox.add_child(HSeparator.new())
+
+	var desc := Label.new()
+	desc.text = "Ingresa tu correo registrado y te enviaremos\nun enlace para restablecer tu contraseña."
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc.add_theme_color_override("font_color", Color(0.58, 0.75, 0.62))
+	desc.add_theme_font_size_override("font_size", 12)
+	vbox.add_child(desc)
+
+	vbox.add_child(HSeparator.new())
+	_rec_email = _campo(vbox, "Correo electrónico registrado")
+	vbox.add_child(HSeparator.new())
+
+	_btn_enviar = Button.new()
+	_btn_enviar.text = "Enviar correo de recuperación"
+	_estilizar_btn_primario(_btn_enviar)
+	_btn_enviar.mouse_entered.connect(func(): _escalar_btn(_btn_enviar, 1.04))
+	_btn_enviar.mouse_exited.connect(func(): _escalar_btn(_btn_enviar, 1.0))
+	vbox.add_child(_btn_enviar)
+	_btn_enviar.pressed.connect(_on_recuperar_pressed)
+
+	var btn_volver_rec := _btn_link("← Volver al login", Color(0.40, 0.72, 1.0))
+	vbox.add_child(btn_volver_rec)
+	btn_volver_rec.pressed.connect(func(): _cambiar_panel("login"))
+
+	vbox.add_child(HSeparator.new())
+	_msg_rec = _make_msg(); vbox.add_child(_msg_rec)
+
+	add_child(_panel_rec)
+
+
+# ════════════════════════════════════════════════════════════
+# CONSTRUCTOR INTERNO DE PANELES
+# ════════════════════════════════════════════════════════════
+func _nuevo_panel() -> VBoxContainer:
+	var root := Control.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var cc := CenterContainer.new()
+	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(cc)
+
+	var pc := PanelContainer.new()
+	pc.add_theme_stylebox_override("panel", _style_panel())
+	cc.add_child(pc)
+
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size        = Vector2(330, 390)
+	sc.horizontal_scroll_mode     = ScrollContainer.SCROLL_MODE_DISABLED
+	pc.add_child(sc)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(vbox)
+
+	if _panel_reg == null:
+		_panel_reg = root
+	else:
+		_panel_rec = root
+
+	return vbox
+
+
+# ════════════════════════════════════════════════════════════
+# CAMBIO DE PANEL CON TRANSICIÓN
+# ════════════════════════════════════════════════════════════
+func _cambiar_panel(cual: String) -> void:
+	var prev : Control = null
+	if _center.visible:
+		prev = _center
+	elif is_instance_valid(_panel_reg) and _panel_reg.visible:
+		prev = _panel_reg
+	elif is_instance_valid(_panel_rec) and _panel_rec.visible:
+		prev = _panel_rec
+
+	var next : Control = null
+	match cual:
+		"login":     next = _center
+		"registro":  next = _panel_reg
+		"recuperar": next = _panel_rec
+
+	_msg_login.text = ""
+	if is_instance_valid(_msg_reg): _msg_reg.text = ""
+	if is_instance_valid(_msg_rec): _msg_rec.text = ""
 	_set_cargando(false)
-	_mostrar_mensaje("✓ Bienvenido al campus.", Color.GREEN)
-	await get_tree().create_timer(1.0).timeout
-	# Siguiente escena — la activamos cuando tengamos el mapa listo
-	get_tree().change_scene_to_file("res://scenes/mapa/scene_mapa_mundo.tscn")
+
+	if prev != null and next != null and prev != next:
+		if _tween_panel: _tween_panel.kill()
+		_tween_panel = create_tween()
+		_tween_panel.tween_property(prev, "modulate:a", 0.0, 0.13)
+		_tween_panel.tween_callback(func():
+			_center.visible    = (cual == "login")
+			if is_instance_valid(_panel_reg): _panel_reg.visible = (cual == "registro")
+			if is_instance_valid(_panel_rec): _panel_rec.visible = (cual == "recuperar")
+			if is_instance_valid(next): next.modulate.a = 0.0
+		)
+		_tween_panel.tween_property(next, "modulate:a", 1.0, 0.20)
+	else:
+		_center.visible = (cual == "login")
+		if is_instance_valid(_panel_reg): _panel_reg.visible = (cual == "registro")
+		if is_instance_valid(_panel_rec): _panel_rec.visible = (cual == "recuperar")
+
+
+# ════════════════════════════════════════════════════════════
+# ACCIONES
+# ════════════════════════════════════════════════════════════
+func _on_login_pressed() -> void:
+	var email := _email_in.text.strip_edges()
+	var pass_ := _pass_in.text
+	if email.is_empty() or pass_.is_empty():
+		_msg(_msg_login, "Completa todos los campos.", Color(0.98, 0.82, 0.12))
+		_shake(_center)
+		return
+	if not email.contains("@"):
+		_msg(_msg_login, "El correo no es válido.", Color(0.98, 0.82, 0.12))
+		_shake(_center)
+		return
+	_set_cargando(true)
+	_msg(_msg_login, "Conectando...", Color(0.65, 0.90, 0.70))
+	SupabaseManager.login(email, pass_)
+
+
+func _on_registro_pressed() -> void:
+	var nombre   := _reg_nombre.text.strip_edges()
+	var cedula   := _reg_cedula.text.strip_edges()
+	var email    := _reg_email.text.strip_edges()
+	var pass_    := _reg_pass.text
+	var confirm_ := _reg_confirm.text
+	var carrera  := _reg_carrera.get_item_text(_reg_carrera.selected)
+	var semestre := _reg_semestre.selected + 1
+
+	if nombre.is_empty() or cedula.is_empty() or email.is_empty() or pass_.is_empty():
+		_msg(_msg_reg, "Completa todos los campos obligatorios (*).", Color(0.98, 0.82, 0.12))
+		_shake(_panel_reg); return
+	if not email.contains("@"):
+		_msg(_msg_reg, "El correo no es válido.", Color(0.98, 0.82, 0.12))
+		_shake(_panel_reg); return
+	if pass_.length() < 6:
+		_msg(_msg_reg, "La contraseña debe tener al menos 6 caracteres.", Color(0.98, 0.82, 0.12))
+		_shake(_panel_reg); return
+	if pass_ != confirm_:
+		_msg(_msg_reg, "Las contraseñas no coinciden.", Color(0.98, 0.82, 0.12))
+		_shake(_panel_reg); return
+
+	_set_cargando(true)
+	_msg(_msg_reg, "Creando cuenta...", Color(0.65, 0.90, 0.70))
+	SupabaseManager.registrar(email, pass_, {
+		"nombre"  : nombre,
+		"cedula"  : cedula,
+		"carrera" : carrera,
+		"semestre": semestre
+	})
+
+
+func _on_recuperar_pressed() -> void:
+	var email := _rec_email.text.strip_edges()
+	if email.is_empty():
+		_msg(_msg_rec, "Ingresa tu correo.", Color(0.98, 0.82, 0.12))
+		_shake(_panel_rec); return
+	if not email.contains("@"):
+		_msg(_msg_rec, "Correo no válido.", Color(0.98, 0.82, 0.12))
+		_shake(_panel_rec); return
+	_set_cargando(true)
+	_msg(_msg_rec, "Enviando correo...", Color(0.65, 0.90, 0.70))
+	SupabaseManager.recuperar_contrasena(email)
+
+
+# ════════════════════════════════════════════════════════════
+# CALLBACKS SUPABASE
+# ════════════════════════════════════════════════════════════
+func _en_login_exitoso(_datos: Dictionary) -> void:
+	_set_cargando(false)
+	_msg(_msg_login, "¡Bienvenido al campus!", Color(0.28, 0.95, 0.45))
+	var tw := create_tween()
+	tw.tween_property(_center, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(func():
+		get_tree().change_scene_to_file("res://scenes/mapa/scene_mapa_mundo.tscn"))
 
 
 func _en_login_fallido(error: String) -> void:
-	print("❌ Login fallido: " + error)
 	_set_cargando(false)
-	_mostrar_mensaje("✗ " + error, Color.RED)
+	_msg(_msg_login, error, Color(0.95, 0.30, 0.30))
+	_shake(_center)
+
+
+func _en_registro_exitoso(usuario: Dictionary) -> void:
+	_set_cargando(false)
+	if not SupabaseManager.jwt_token.is_empty():
+		_msg(_msg_reg, "¡Cuenta creada! Entrando al campus...", Color(0.28, 0.95, 0.45))
+		await get_tree().create_timer(1.0).timeout
+		get_tree().change_scene_to_file("res://scenes/mapa/scene_mapa_mundo.tscn")
+	else:
+		var correo : String = usuario.get("email", _reg_email.text)
+		_msg(_msg_reg,
+			"¡Cuenta creada!\nRevisa tu correo (%s)\ny confírmalo para iniciar sesión." % correo,
+			Color(0.28, 0.95, 0.45))
+		await get_tree().create_timer(4.0).timeout
+		_cambiar_panel("login")
+		_email_in.text = _reg_email.text
+
+
+func _en_registro_fallido(error: String) -> void:
+	_set_cargando(false)
+	_msg(_msg_reg, error, Color(0.95, 0.30, 0.30))
+	_shake(_panel_reg)
+
+
+func _en_recuperacion_enviada() -> void:
+	_set_cargando(false)
+	_msg(_msg_rec,
+		"¡Correo enviado!\nRevisa tu bandeja y la carpeta de spam.",
+		Color(0.28, 0.95, 0.45))
+	_btn_enviar.disabled = true
+	await get_tree().create_timer(5.0).timeout
+	if is_instance_valid(_btn_enviar): _btn_enviar.disabled = false
+	_cambiar_panel("login")
+
+
+func _en_recuperacion_fallida(error: String) -> void:
+	_set_cargando(false)
+	_msg(_msg_rec, error, Color(0.95, 0.30, 0.30))
 
 
 func _en_error_red(mensaje: String) -> void:
-	print("🌐 Error de red: " + mensaje)
 	_set_cargando(false)
-	_mostrar_mensaje("✗ Sin conexión.", Color.RED)
+	_msg(_msg_login, "Sin conexión.", Color(0.95, 0.30, 0.30))
+	if is_instance_valid(_msg_reg): _msg_reg.text = "Sin conexión: " + mensaje
+	if is_instance_valid(_msg_rec): _msg_rec.text = "Sin conexión."
 
 
-func _mostrar_mensaje(texto: String, color: Color) -> void:
-	mensaje_label.text     = texto
-	mensaje_label.modulate = color
-
-
+# ════════════════════════════════════════════════════════════
+# HELPERS UI
+# ════════════════════════════════════════════════════════════
 func _set_cargando(estado: bool) -> void:
-	boton_login.disabled    = estado
-	boton_registro.disabled = estado
+	_cargando           = estado
+	_btn_login.disabled = estado
+	if is_instance_valid(_btn_crear):  _btn_crear.disabled  = estado
+	if is_instance_valid(_btn_enviar): _btn_enviar.disabled = estado
+	if is_instance_valid(_spinner_label):
+		_spinner_label.visible = estado
+	if estado:
+		_spinner_idx   = 0
+		_spinner_timer = 0.0
+
+
+func _msg(label: Label, texto: String, color: Color) -> void:
+	if not is_instance_valid(label): return
+	label.text     = texto
+	label.modulate = Color.WHITE
+	label.add_theme_color_override("font_color", color)
+	var tw := create_tween()
+	tw.tween_property(label, "scale", Vector2(1.05, 1.05), 0.08)
+	tw.tween_property(label, "scale", Vector2(1.0, 1.0),   0.10)
+
+
+func _shake(node: Control) -> void:
+	if not is_instance_valid(node): return
+	var tw := create_tween()
+	tw.tween_property(node, "modulate", Color(1.0, 0.55, 0.55, 1.0), 0.07)
+	tw.tween_property(node, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.28)
+
+
+func _titulo(vbox: VBoxContainer, texto: String) -> void:
+	var l := Label.new()
+	l.text = "🌿  " + texto
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", 18)
+	l.add_theme_color_override("font_color", Color(0.35, 0.95, 0.50))
+	vbox.add_child(l)
+
+
+func _lbl(vbox: VBoxContainer, texto: String) -> void:
+	var l := Label.new()
+	l.text = texto
+	l.add_theme_font_size_override("font_size", 11)
+	l.add_theme_color_override("font_color", Color(0.62, 0.78, 0.65))
+	vbox.add_child(l)
+
+
+func _lbl_sec(vbox: VBoxContainer, texto: String) -> void:
+	var l := Label.new()
+	l.text = "▸ " + texto
+	l.add_theme_font_size_override("font_size", 10)
+	l.add_theme_color_override("font_color", Color(0.30, 0.78, 0.42))
+	vbox.add_child(l)
+
+
+func _campo(vbox: VBoxContainer, placeholder: String,
+			secreto: bool = false) -> LineEdit:
+	var le := LineEdit.new()
+	le.placeholder_text      = placeholder
+	le.secret                = secreto
+	le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_estilizar_input(le)
+	vbox.add_child(le)
+	return le
+
+
+func _make_msg() -> Label:
+	var l := Label.new()
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.autowrap_mode        = TextServer.AUTOWRAP_WORD
+	l.add_theme_font_size_override("font_size", 12)
+	return l
