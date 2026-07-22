@@ -39,8 +39,8 @@ const ZONAS : Dictionary = {
 		"modulo_id": 2,
 		"nombre":    "Energia - Bloque E",
 		"color":     Color(0.90, 0.45, 0.00),
-		"pos":       Vector2(768, 288),
-		"size":      Vector2(168, 168),
+		"pos":       Vector2(776, 288),
+		"size":      Vector2(152, 168),
 	},
 	# ── Módulo 1 — Entorno e Infraestructura ─────────────────
 	"ZonaBloqueF": {
@@ -75,8 +75,8 @@ const ZONAS : Dictionary = {
 		"modulo_id": 2,
 		"nombre":    "Energia - Bloque B",
 		"color":     Color(0.90, 0.45, 0.00),
-		"pos":       Vector2(744, 488),
-		"size":      Vector2(184, 184),
+		"pos":       Vector2(752, 488),
+		"size":      Vector2(168, 184),
 	},
 	"ZonaFotocopiado": {
 		"modulo_id": 1,

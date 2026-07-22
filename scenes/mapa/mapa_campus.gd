@@ -52,13 +52,13 @@ const EDIFICIOS_CALOR : Array = [
 	{"rect": Rect2(  0, 208, 192, 160), "mod": 5, "nombre": "Estac."},
 	{"rect": Rect2(240, 208, 176, 160), "mod": 3, "nombre": "Cafetín"},
 	{"rect": Rect2(464, 208, 208, 160), "mod": 4, "nombre": "Bibliot."},
-	{"rect": Rect2(688, 208, 160, 160), "mod": 2, "nombre": "Bloque E"},
+	{"rect": Rect2(704, 208, 144, 160), "mod": 2, "nombre": "Bloque E"},
 	{"rect": Rect2(1152,208, 256, 368), "mod": 1, "nombre": "Bloque F"},
 	# Fila 2  y=400..576
 	{"rect": Rect2(  0, 400, 192, 176), "mod": 1, "nombre": "Bloque G"},
 	{"rect": Rect2(240, 400, 176, 176), "mod": 2, "nombre": "Bloque D"},
 	{"rect": Rect2(464, 400, 176, 176), "mod": 2, "nombre": "Bloque A"},
-	{"rect": Rect2(656, 400, 176, 176), "mod": 2, "nombre": "Bloque B"},
+	{"rect": Rect2(672, 400, 160, 176), "mod": 2, "nombre": "Bloque B"},
 	# Fila 3  y=608..704
 	{"rect": Rect2(  0, 608, 144,  96), "mod": 1, "nombre": "Fotocop."},
 	{"rect": Rect2(240, 608, 160,  96), "mod": 2, "nombre": "Bloque C"},
@@ -237,8 +237,8 @@ func _draw() -> void:
 	_edif(font, Rect2(464, 208, 208, 160), "Biblioteca\nM4",
 		_color_edif(4, C_EDIF_VIP), C_TECHO, C_TEXTO, 4)
 
-	# BLOQUE E M2  x=688..848  y=208..368
-	_edif(font, Rect2(688, 208, 160, 160), "Bloque E\nM2",
+	# BLOQUE E M2  x=704..848  y=208..368
+	_edif(font, Rect2(704, 208, 144, 160), "Bloque E\nM2",
 		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
 
 	# BLOQUE F M1  x=1152..1408  y=208..576
@@ -259,8 +259,8 @@ func _draw() -> void:
 	_edif(font, Rect2(464, 400, 176, 176), "Bloque A\nM2",
 		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
 
-	# BLOQUE B M2  x=656..832  y=400..576
-	_edif(font, Rect2(656, 400, 176, 176), "Bloque B\nM2",
+	# BLOQUE B M2  x=672..832  y=400..576
+	_edif(font, Rect2(672, 400, 160, 176), "Bloque B\nM2",
 		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
 
 	# ── FILA 3  y=608..704  (pasillo 32px arriba, avda abajo) ─

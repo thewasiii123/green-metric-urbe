@@ -13,22 +13,18 @@ const EDIFICIOS : Array = [
 	# Lago norte  y=0..163
 	[704,   80,  1408,  163],
 
-	# Fila 1  y=208..368
+	# Fila 1  y=208..368  (BloqueE desplazado 16px → pasillo 32px con Biblioteca)
 	[ 96,  288,   192,  160],   # Estacionamiento M5
 	[328,  288,   176,  160],   # Cafetín
 	[568,  288,   208,  160],   # Biblioteca
-	[768,  288,   160,  160],   # Bloque E
+	[776,  288,   144,  160],   # Bloque E  (x=704..848)
 	[1280, 392,   256,  368],   # Bloque F  (filas 1 y 2)
 
-	# Muro entre Biblioteca y Bloque E (grieta 16px fila1)
-	[680,  288,    16,  160],
-
-	# Fila 2  y=400..576
+	# Fila 2  y=400..576  (BloqueB desplazado 16px → pasillo 32px con BloqueA)
 	[ 96,  488,   192,  176],   # Bloque G
 	[328,  488,   176,  176],   # Bloque D
 	[552,  488,   176,  176],   # Bloque A
-	[648,  488,    16,  176],   # Muro entre Bloque A y Bloque B
-	[744,  488,   176,  176],   # Bloque B
+	[752,  488,   160,  176],   # Bloque B  (x=672..832)
 
 	# Fila 3  y=608..704
 	[ 72,  656,   144,   96],   # Fotocopiado
