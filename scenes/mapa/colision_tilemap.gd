@@ -20,10 +20,14 @@ const EDIFICIOS : Array = [
 	[768,  288,   160,  160],   # Bloque E
 	[1280, 392,   256,  368],   # Bloque F  (filas 1 y 2)
 
+	# Muro entre Biblioteca y Bloque E (grieta 16px fila1)
+	[680,  288,    16,  160],
+
 	# Fila 2  y=400..576
 	[ 96,  488,   192,  176],   # Bloque G
 	[328,  488,   176,  176],   # Bloque D
 	[552,  488,   176,  176],   # Bloque A
+	[648,  488,    16,  176],   # Muro entre Bloque A y Bloque B
 	[744,  488,   176,  176],   # Bloque B
 
 	# Fila 3  y=608..704

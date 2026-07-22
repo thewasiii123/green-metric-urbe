@@ -1184,11 +1184,16 @@ func _sfx(nombre: String) -> void:
 # ZONAS VERDES ADOPTABLES
 # ════════════════════════════════════════════════════════════
 const DATOS_ZONAS_VERDES : Array = [
-	{"nombre": "Lago URBE",        "pos": Vector2(200,  80), "mod": 4},
-	{"nombre": "Jardín Bloque G",  "pos": Vector2( 96, 490), "mod": 1},
-	{"nombre": "Plaza Central",    "pos": Vector2(752, 300), "mod": 1},
-	{"nombre": "Área Cafetín",     "pos": Vector2(752, 490), "mod": 3},
-	{"nombre": "Zona Deportiva",   "pos": Vector2(1260, 490), "mod": 5},
+	# En Plaza Central (área verde x=848-1104, y=208-704) — la más grande
+	{"nombre": "Plaza Central",   "pos": Vector2(976, 456), "mod": 4, "radio": 36.0},
+	# Corredor izquierdo fila1 (gap 48px entre Estacionamiento y Cafetín)
+	{"nombre": "Corredor Oeste",  "pos": Vector2(216, 288), "mod": 1, "radio": 18.0},
+	# Corredor centro fila1 (gap 48px entre Cafetín y Biblioteca)
+	{"nombre": "Jardín Central",  "pos": Vector2(440, 288), "mod": 3, "radio": 18.0},
+	# Zona abierta al este del Rectorado (gap 272px entre Rectorado y Área Servicios)
+	{"nombre": "Zona Cultural",   "pos": Vector2(1016, 656), "mod": 6, "radio": 28.0},
+	# Avenida principal (debajo de todos los edificios, y=736)
+	{"nombre": "Avenida URBE",    "pos": Vector2(672, 736), "mod": 5, "radio": 28.0},
 ]
 
 func _spawn_zonas_verdes() -> void:
@@ -1197,6 +1202,7 @@ func _spawn_zonas_verdes() -> void:
 		zona.nombre_zona = dato["nombre"]
 		zona.modulo_id   = dato["mod"]
 		zona.position    = dato["pos"]
+		zona.radio       = float(dato.get("radio", 32.0))
 		add_child(zona)
 		zona.zona_adoptada.connect(_on_zona_verde_adoptada)
 		_zonas_verdes.append(zona)

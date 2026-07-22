@@ -32,7 +32,7 @@ func _crear_label() -> void:
 	_label.add_theme_color_override("font_color", Color(0.90, 1.0, 0.90))
 	_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	_label.add_theme_constant_override("outline_size", 2)
-	_label.position = Vector2(-55.0, -radio - 24.0)
+	_label.position = Vector2(-55.0, -(radio + 24.0))
 	_label.size     = Vector2(110.0, 20.0)
 	_label.visible  = false
 	add_child(_label)
