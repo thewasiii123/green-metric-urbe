@@ -326,8 +326,7 @@ func _crear_ui() -> void:
 	imp_row.add_child(imp_lbl)
 
 	_barra_preview = ColorRect.new()
-	_barra_preview.custom_minimum_size   = Vector2(360, 12)
-	_barra_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_barra_preview.custom_minimum_size = Vector2(360, 12)
 	_barra_preview.color = Color(0.10, 0.18, 0.12)
 	imp_row.add_child(_barra_preview)
 

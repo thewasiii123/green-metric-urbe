@@ -44,6 +44,10 @@ var _btn_reciclable  : Button    = null
 var _btn_organico    : Button    = null
 var _btn_no_recic    : Button    = null
 var _tiempo_bar_fill : ColorRect = null
+var _res_overlay     : Panel     = null
+var _res_titulo_lbl  : Label     = null
+var _res_score_lbl   : Label     = null
+var _res_xp_lbl      : Label     = null
 
 # ── Estado ────────────────────────────────────────────────────
 var _residuos_mezclados : Array  = []
@@ -123,12 +127,10 @@ func _clasificar(tipo_elegido: int) -> void:
 	var r        : Dictionary = _residuos_mezclados[_indice]
 	var correcto : bool       = (tipo_elegido == r["tipo"])
 
-	# Deshabilitar botones
 	_btn_reciclable.disabled = true
 	_btn_organico.disabled   = true
 	_btn_no_recic.disabled   = true
 
-	# Colorear respuesta
 	var btn_elegido : Button = _boton_por_tipo(tipo_elegido)
 	var btn_correct : Button = _boton_por_tipo(r["tipo"])
 
@@ -138,11 +140,13 @@ func _clasificar(tipo_elegido: int) -> void:
 		_aciertos += 1
 		_feedback_lbl.add_theme_color_override("font_color", Color(0.25, 0.88, 0.25))
 		_feedback_lbl.text = "✓ ¡Correcto!  +%d XP" % XP_POR_ACIERTO
+		_sfx("xp")
 	else:
 		_btn_rojo(btn_elegido)
 		_btn_verde(btn_correct)
 		_feedback_lbl.add_theme_color_override("font_color", Color(0.90, 0.28, 0.28))
-		_feedback_lbl.text = "✗ Incorrecto"
+		_feedback_lbl.text = "✗ Incorrecto — era: %s" % _boton_nombre(r["tipo"])
+		_sfx("error")
 
 	_dato_lbl.text = "💡 " + r["dato"]
 
@@ -156,8 +160,39 @@ func _clasificar(tipo_elegido: int) -> void:
 
 func _terminar() -> void:
 	_activo = false
-	hide()
-	minijuego_completado.emit(_xp_total)
+	_mostrar_resultado()
+
+
+func _mostrar_resultado() -> void:
+	var razon   : String = "⏱ Tiempo agotado" if _tiempo_restante <= 0 else "✓ ¡Ronda completa!"
+	var estrellas : String = "⭐⭐⭐" if _aciertos == _residuos_mezclados.size() \
+		else ("⭐⭐" if _aciertos >= _residuos_mezclados.size() * 0.7 else "⭐")
+	_res_titulo_lbl.text = razon + "  " + estrellas
+	_res_score_lbl.text  = "%d / %d clasificados correctamente" % [_aciertos, _residuos_mezclados.size()]
+	_res_xp_lbl.text     = "+%d XP ganados" % _xp_total
+	_res_overlay.modulate.a = 0.0
+	_res_overlay.visible    = true
+	var tw := create_tween()
+	tw.tween_property(_res_overlay, "modulate:a", 1.0, 0.3)
+	tw.tween_interval(3.0)
+	tw.tween_callback(func():
+		hide()
+		_res_overlay.visible = false
+		minijuego_completado.emit(_xp_total))
+	_sfx("mision")
+
+
+func _sfx(nombre: String) -> void:
+	var am = get_node_or_null("/root/AudioManager")
+	if am: am.tocar(nombre)
+
+
+func _boton_nombre(tipo: int) -> String:
+	match tipo:
+		Tipo.RECICLABLE:    return "Reciclable"
+		Tipo.ORGANICO:      return "Orgánico"
+		Tipo.NO_RECICLABLE: return "No reciclable"
+	return ""
 
 
 func _actualizar_barra_tiempo() -> void:
@@ -339,6 +374,40 @@ func _crear_ui() -> void:
 	_feedback_lbl.add_theme_font_size_override("font_size", 15)
 	_feedback_lbl.custom_minimum_size = Vector2(0, 24)
 	vbox.add_child(_feedback_lbl)
+
+	# ── Overlay de resultados (aparece al terminar) ────────────
+	_res_overlay = Panel.new()
+	_res_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var rs := StyleBoxFlat.new()
+	rs.bg_color = Color(0.04, 0.10, 0.06, 0.96)
+	rs.set_corner_radius_all(14)
+	_res_overlay.add_theme_stylebox_override("panel", rs)
+	_res_overlay.visible = false
+	panel.add_child(_res_overlay)
+
+	var res_vbox := VBoxContainer.new()
+	res_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	res_vbox.add_theme_constant_override("separation", 18)
+	res_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_res_overlay.add_child(res_vbox)
+
+	_res_titulo_lbl = Label.new()
+	_res_titulo_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_res_titulo_lbl.add_theme_font_size_override("font_size", 26)
+	_res_titulo_lbl.add_theme_color_override("font_color", Color(0.30, 1.00, 0.42))
+	res_vbox.add_child(_res_titulo_lbl)
+
+	_res_score_lbl = Label.new()
+	_res_score_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_res_score_lbl.add_theme_font_size_override("font_size", 18)
+	_res_score_lbl.add_theme_color_override("font_color", Color(0.92, 0.92, 0.92))
+	res_vbox.add_child(_res_score_lbl)
+
+	_res_xp_lbl = Label.new()
+	_res_xp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_res_xp_lbl.add_theme_font_size_override("font_size", 22)
+	_res_xp_lbl.add_theme_color_override("font_color", Color(1.00, 0.85, 0.18))
+	res_vbox.add_child(_res_xp_lbl)
 
 
 func _crear_boton(texto: String, bg: Color, borde: Color) -> Button:

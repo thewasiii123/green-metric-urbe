@@ -681,6 +681,13 @@ func _on_quiz_completado(xp: int) -> void:
 func _on_minijuego_completado(xp: int) -> void:
 	_aplicar_xp(xp, "mision_residuos")
 	EconomiaManager.ganar_creditos(xp / 5)
+	# Actualizar progreso M3 en sidebar (10 aciertos = 50 XP máx → 100%)
+	var pct  : float = clampf(float(xp) / 50.0, 0.0, 1.0)
+	var prev : float = float(_progreso_modulos.get(3, 0.0))
+	_progreso_modulos[3] = clampf(prev + pct * 0.5, 0.0, 1.0)
+	_actualizar_sidebar()
+	SupabaseManager.guardar_progreso(3, int(pct * 100), xp, xp >= 40)
+	_mostrar_mision_completada("mision_residuos", xp)
 
 func _aplicar_xp(xp: int, mision_id: String) -> void:
 	var nivel_antes := _nivel_actual
@@ -1399,6 +1406,13 @@ func _abrir_resultados() -> void:
 	_resultados_ui.mostrar(_progreso_modulos, _xp_total)
 
 
+func _abrir_simulador() -> void:
+	if not is_instance_valid(_sim_decision_ui): return
+	if _sim_decision_ui.visible: return
+	_sim_decision_ui.mostrar(0)
+	_sfx("zona")
+
+
 func _verificar_misiones_completadas() -> void:
 	var total_completadas : int = 0
 	for mod_id in _progreso_modulos.keys():
@@ -1429,6 +1443,8 @@ func _crear_btn_mapa_calor() -> void:
 		 "accion": func(): _abrir_resultados()},
 		{"emoji": "🏆", "tip": "Tabla de clasificación",     "borde": Color(0.90, 0.72, 0.08),
 		 "accion": func(): _leaderboard_ui.mostrar()},
+		{"emoji": "🔬", "tip": "Simulador de decisiones",    "borde": Color(0.55, 0.22, 0.90),
+		 "accion": func(): _abrir_simulador()},
 	]
 
 	for i in DEFS.size():
