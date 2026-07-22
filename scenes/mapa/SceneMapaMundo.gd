@@ -1096,25 +1096,6 @@ func _init_sistemas_eva() -> void:
 	_insignia_lbl.visible = false
 	_hud_canvas.add_child(_insignia_lbl)
 
-	# Botón Leaderboard (esquina superior derecha, debajo energía)
-	var btn_lb := Button.new()
-	btn_lb.text = "🏆"
-	btn_lb.custom_minimum_size = Vector2(38, 38)
-	btn_lb.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	btn_lb.offset_left   = -44
-	btn_lb.offset_top    = 56
-	btn_lb.offset_right  = -4
-	btn_lb.offset_bottom = 96
-	btn_lb.add_theme_font_size_override("font_size", 18)
-	var s_lb := StyleBoxFlat.new()
-	s_lb.bg_color     = Color(0.06, 0.10, 0.16, 0.92)
-	s_lb.border_color = Color(0.30, 0.72, 0.30)
-	s_lb.set_border_width_all(2)
-	s_lb.set_corner_radius_all(8)
-	btn_lb.add_theme_stylebox_override("normal", s_lb)
-	btn_lb.pressed.connect(func(): _leaderboard_ui.mostrar())
-	_hud_canvas.add_child(btn_lb)
-
 	_crear_btn_mapa_calor()
 
 	# Señales EconomiaManager
@@ -1270,51 +1251,42 @@ func _verificar_misiones_completadas() -> void:
 # BOTÓN MAPA DE CALOR (HUD)
 # ════════════════════════════════════════════════════════════
 func _crear_btn_mapa_calor() -> void:
-	# ── Barra de herramientas inferior derecha ────────────────
-	# Posición: esquina inferior derecha, sobre la avenida de entrada.
-	# Los dos botones van juntos, lejos del sidebar y del HUD superior.
-
+	# ── Barra de herramientas: 3 botones en esquina inferior izquierda ──
 	var s_base := StyleBoxFlat.new()
 	s_base.bg_color = Color(0.04, 0.08, 0.06, 0.92)
 	s_base.set_border_width_all(2)
 	s_base.set_corner_radius_all(8)
 
-	# 🌡 Mapa de calor
-	var s1 := s_base.duplicate() as StyleBoxFlat
-	s1.border_color = Color(0.85, 0.38, 0.08)
-	var btn_calor := Button.new()
-	btn_calor.text                  = "🌡"
-	btn_calor.tooltip_text          = "Mapa de calor energético"
-	btn_calor.custom_minimum_size   = Vector2(42, 42)
-	btn_calor.add_theme_font_size_override("font_size", 20)
-	btn_calor.add_theme_stylebox_override("normal", s1)
-	btn_calor.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	btn_calor.offset_left   = 8
-	btn_calor.offset_top    = -50
-	btn_calor.offset_right  = 50
-	btn_calor.offset_bottom = -8
-	btn_calor.pressed.connect(func():
-		if mapa_campus and mapa_campus.has_method("toggle_mapa_calor"):
-			mapa_campus.toggle_mapa_calor()
-		_sfx("zona"))
-	_hud_canvas.add_child(btn_calor)
+	var DEFS : Array = [
+		{"emoji": "🌡", "tip": "Mapa de calor energético",  "borde": Color(0.85, 0.38, 0.08),
+		 "accion": func():
+			if mapa_campus and mapa_campus.has_method("toggle_mapa_calor"):
+				mapa_campus.toggle_mapa_calor()
+			_sfx("zona")},
+		{"emoji": "📊", "tip": "Reporte GreenMetric",        "borde": Color(0.22, 0.80, 0.28),
+		 "accion": func(): _abrir_resultados()},
+		{"emoji": "🏆", "tip": "Tabla de clasificación",     "borde": Color(0.90, 0.72, 0.08),
+		 "accion": func(): _leaderboard_ui.mostrar()},
+	]
 
-	# 📊 Resultados GreenMetric
-	var s2 := s_base.duplicate() as StyleBoxFlat
-	s2.border_color = Color(0.22, 0.80, 0.28)
-	var btn_res := Button.new()
-	btn_res.text                = "📊"
-	btn_res.tooltip_text        = "Reporte GreenMetric"
-	btn_res.custom_minimum_size = Vector2(42, 42)
-	btn_res.add_theme_font_size_override("font_size", 20)
-	btn_res.add_theme_stylebox_override("normal", s2)
-	btn_res.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	btn_res.offset_left   = 56
-	btn_res.offset_top    = -50
-	btn_res.offset_right  = 98
-	btn_res.offset_bottom = -8
-	btn_res.pressed.connect(_abrir_resultados)
-	_hud_canvas.add_child(btn_res)
+	for i in DEFS.size():
+		var d  : Dictionary = DEFS[i]
+		var sx : float      = 8.0 + i * 48.0
+		var s  := s_base.duplicate() as StyleBoxFlat
+		s.border_color = d["borde"]
+		var btn := Button.new()
+		btn.text                = d["emoji"]
+		btn.tooltip_text        = d["tip"]
+		btn.custom_minimum_size = Vector2(42, 42)
+		btn.add_theme_font_size_override("font_size", 20)
+		btn.add_theme_stylebox_override("normal", s)
+		btn.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+		btn.offset_left   = sx
+		btn.offset_top    = -50
+		btn.offset_right  = sx + 42
+		btn.offset_bottom = -8
+		btn.pressed.connect(d["accion"])
+		_hud_canvas.add_child(btn)
 
 
 func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:
