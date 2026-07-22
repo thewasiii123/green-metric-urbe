@@ -15,6 +15,10 @@ const QUIZ_ESCENA               := preload("res://scenes/ui/quiz_npc.tscn")
 const DIALOGO_ESCENA            := preload("res://scenes/ui/dialogo_npc.tscn")
 const MISION_INICIO_ESCENA      := preload("res://scenes/ui/mision_inicio.gd")
 const MINIJUEGO_RESIDUOS_ESCENA := preload("res://scenes/ui/minijuego_residuos.gd")
+const TUTORIAL_ESCENA           := preload("res://scenes/ui/tutorial_onboarding.gd")
+const CRISIS_ESCENA             := preload("res://scenes/ui/crisis_evento.gd")
+const LEADERBOARD_ESCENA        := preload("res://scenes/ui/leaderboard.gd")
+const SIMULADOR_ESCENA          := preload("res://scenes/ui/simulador_decision.gd")
 
 # ── Sistema de niveles ───────────────────────────────────────
 const NIVELES : Array = [
@@ -370,6 +374,18 @@ var _complete_barra  : ColorRect = null
 # ── Contador de XP flotante ───────────────────────────────────
 var _xp_float_offset : int = 0
 
+# ── Sistemas EVA ─────────────────────────────────────────────
+var _tutorial_ui      : CanvasLayer = null
+var _crisis_ui        : CanvasLayer = null
+var _leaderboard_ui   : CanvasLayer = null
+var _sim_decision_ui  : CanvasLayer = null
+var _timer_crisis     : float       = 0.0
+const _CRISIS_MIN     : float       = 90.0
+const _CRISIS_MAX     : float       = 180.0
+var _hud_creditos_lbl : Label       = null
+var _hud_energia_lbl  : Label       = null
+var _insignia_lbl     : Label       = null
+
 # ── Progreso de módulos (copia local para sidebar) ────────────
 var _progreso_modulos : Dictionary = {1: 0.35, 2: 0.40, 3: 0.30, 4: 0.45, 5: 0.22, 6: 0.55}
 
@@ -432,6 +448,8 @@ func _ready() -> void:
 	SupabaseManager.progreso_cargado.connect(_on_progreso_cargado)
 	SupabaseManager.cargar_modulos()
 	SupabaseManager.cargar_progreso()
+
+	_init_sistemas_eva()
 
 
 # ── HUD ──────────────────────────────────────────────────────
@@ -644,9 +662,11 @@ func _on_dialogo_terminado(mision_id: String) -> void:
 # ── Callbacks de completado ───────────────────────────────────
 func _on_quiz_completado(xp: int) -> void:
 	_aplicar_xp(xp, _mision_activa)
+	EconomiaManager.on_modulo_completado(_modulo_activo, xp, 30)
 
 func _on_minijuego_completado(xp: int) -> void:
 	_aplicar_xp(xp, "mision_residuos")
+	EconomiaManager.ganar_creditos(xp / 5)
 
 func _aplicar_xp(xp: int, mision_id: String) -> void:
 	var nivel_antes := _nivel_actual
@@ -997,3 +1017,168 @@ func _on_interaccion_iniciada() -> void:
 	tw.tween_property(camara, "zoom", Vector2(1.7, 1.7), 0.22)
 	tw.tween_interval(0.3)
 	tw.tween_property(camara, "zoom", Vector2(1.5, 1.5), 0.40)
+
+
+# ════════════════════════════════════════════════════════════
+# SISTEMAS EVA — Tutorial, Crisis, Economía, Leaderboard
+# ════════════════════════════════════════════════════════════
+func _init_sistemas_eva() -> void:
+	_tutorial_ui = TUTORIAL_ESCENA.new()
+	add_child(_tutorial_ui)
+	_tutorial_ui.tutorial_completado.connect(_on_tutorial_completado)
+
+	_crisis_ui = CRISIS_ESCENA.new()
+	add_child(_crisis_ui)
+	_crisis_ui.crisis_resulta.connect(_on_crisis_resulta)
+	_timer_crisis = _CRISIS_MIN
+
+	_leaderboard_ui = LEADERBOARD_ESCENA.new()
+	add_child(_leaderboard_ui)
+
+	_sim_decision_ui = SIMULADOR_ESCENA.new()
+	add_child(_sim_decision_ui)
+	_sim_decision_ui.decision_tomada.connect(_on_decision_tomada)
+
+	# EcoCredits label (esquina superior derecha)
+	_hud_creditos_lbl = Label.new()
+	_hud_creditos_lbl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_hud_creditos_lbl.offset_left   = -165
+	_hud_creditos_lbl.offset_top    =  6
+	_hud_creditos_lbl.offset_right  = -4
+	_hud_creditos_lbl.offset_bottom =  28
+	_hud_creditos_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_hud_creditos_lbl.add_theme_font_size_override("font_size", 13)
+	_hud_creditos_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.15))
+	_hud_canvas.add_child(_hud_creditos_lbl)
+
+	# Energía/Vidas label
+	_hud_energia_lbl = Label.new()
+	_hud_energia_lbl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_hud_energia_lbl.offset_left   = -165
+	_hud_energia_lbl.offset_top    =  30
+	_hud_energia_lbl.offset_right  = -4
+	_hud_energia_lbl.offset_bottom =  52
+	_hud_energia_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_hud_energia_lbl.add_theme_font_size_override("font_size", 13)
+	_hud_energia_lbl.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+	_hud_canvas.add_child(_hud_energia_lbl)
+
+	# Insignia flotante (abajo centro)
+	_insignia_lbl = Label.new()
+	_insignia_lbl.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_insignia_lbl.offset_left   = -220
+	_insignia_lbl.offset_top    = -130
+	_insignia_lbl.offset_right  =  220
+	_insignia_lbl.offset_bottom = -76
+	_insignia_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_insignia_lbl.add_theme_font_size_override("font_size", 15)
+	_insignia_lbl.add_theme_color_override("font_color", Color(1.0, 0.90, 0.20))
+	_insignia_lbl.visible = false
+	_hud_canvas.add_child(_insignia_lbl)
+
+	# Botón Leaderboard (esquina superior derecha, debajo energía)
+	var btn_lb := Button.new()
+	btn_lb.text = "🏆"
+	btn_lb.custom_minimum_size = Vector2(38, 38)
+	btn_lb.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	btn_lb.offset_left   = -44
+	btn_lb.offset_top    = 56
+	btn_lb.offset_right  = -4
+	btn_lb.offset_bottom = 96
+	btn_lb.add_theme_font_size_override("font_size", 18)
+	var s_lb := StyleBoxFlat.new()
+	s_lb.bg_color     = Color(0.06, 0.10, 0.16, 0.92)
+	s_lb.border_color = Color(0.30, 0.72, 0.30)
+	s_lb.set_border_width_all(2)
+	s_lb.set_corner_radius_all(8)
+	btn_lb.add_theme_stylebox_override("normal", s_lb)
+	btn_lb.pressed.connect(func(): _leaderboard_ui.mostrar())
+	_hud_canvas.add_child(btn_lb)
+
+	# Señales EconomiaManager
+	EconomiaManager.ecocredits_cambiados.connect(_on_creditos_cambiados)
+	EconomiaManager.energia_cambiada.connect(_on_energia_cambiada)
+	EconomiaManager.insignia_obtenida.connect(_on_insignia_obtenida)
+
+	_actualizar_hud_economia()
+
+	# Tutorial en primera sesión (XP == 0)
+	if _xp_total == 0:
+		await get_tree().create_timer(0.6).timeout
+		_tutorial_ui.iniciar()
+
+
+func _process(delta: float) -> void:
+	if _tutorial_ui and _tutorial_ui.visible: return
+	if _crisis_ui and _crisis_ui.visible: return
+	_timer_crisis -= delta
+	if _timer_crisis <= 0.0 and _crisis_ui:
+		_timer_crisis = randf_range(_CRISIS_MIN, _CRISIS_MAX)
+		_crisis_ui.iniciar_aleatoria()
+
+
+func _actualizar_hud_economia() -> void:
+	if _hud_creditos_lbl:
+		_hud_creditos_lbl.text = "💰 %d EC" % EconomiaManager.ecocredits
+	if _hud_energia_lbl:
+		var a : int = EconomiaManager.energia_actual
+		var sv : String = ""
+		for i in EconomiaManager.MAX_ENERGIA:
+			sv += "♥" if i < a else "♡"
+		_hud_energia_lbl.text = sv
+
+
+func _on_creditos_cambiados(total: int) -> void:
+	if _hud_creditos_lbl:
+		_hud_creditos_lbl.text = "💰 %d EC" % total
+
+
+func _on_energia_cambiada(actual: int, _maximo: int) -> void:
+	if _hud_energia_lbl:
+		var sv : String = ""
+		for i in EconomiaManager.MAX_ENERGIA:
+			sv += "♥" if i < actual else "♡"
+		_hud_energia_lbl.text = sv
+
+
+func _on_tutorial_completado() -> void:
+	_timer_crisis = _CRISIS_MIN
+
+
+func _on_crisis_resulta(modulo_id: int, exito: bool) -> void:
+	var delta : float = 0.08 if exito else -0.06
+	var nuevo : float = EconomiaManager.actualizar_impacto(modulo_id, delta)
+	_progreso_modulos[modulo_id] = nuevo
+	_actualizar_sidebar()
+	if mapa_campus and mapa_campus.has_method("actualizar_modulo"):
+		mapa_campus.actualizar_modulo(modulo_id, nuevo)
+	if exito:
+		_aplicar_xp(25, "crisis_%d" % modulo_id)
+		EconomiaManager.otorgar_insignia("crisis_resuelta")
+	_timer_crisis = randf_range(_CRISIS_MIN, _CRISIS_MAX)
+
+
+func _on_decision_tomada(modulo_id: int, delta: float) -> void:
+	var nuevo : float = EconomiaManager.actualizar_impacto(modulo_id, delta)
+	_progreso_modulos[modulo_id] = nuevo
+	_actualizar_sidebar()
+	if mapa_campus and mapa_campus.has_method("actualizar_modulo"):
+		mapa_campus.actualizar_modulo(modulo_id, nuevo)
+	if delta > 0.0:
+		EconomiaManager.ganar_creditos(15)
+
+
+func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:
+	if not _insignia_lbl: return
+	_insignia_lbl.text    = "%s  ¡Insignia desbloqueada: %s!" % [icono, nombre]
+	_insignia_lbl.modulate = Color(1, 1, 1, 0.0)
+	_insignia_lbl.scale    = Vector2(0.75, 0.75)
+	_insignia_lbl.visible  = true
+	var tw := create_tween().set_ease(Tween.EASE_OUT)
+	tw.tween_property(_insignia_lbl, "modulate:a", 1.0, 0.20)
+	tw.parallel().tween_property(_insignia_lbl, "scale", Vector2(1.0, 1.0), 0.25)
+	tw.tween_interval(2.8)
+	tw.tween_property(_insignia_lbl, "modulate:a", 0.0, 0.40)
+	tw.tween_callback(func():
+		_insignia_lbl.visible = false
+		_insignia_lbl.scale   = Vector2(1, 1))

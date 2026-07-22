@@ -31,10 +31,14 @@ func _physics_process(delta: float) -> void:
 	var quiz         = get_tree().get_first_node_in_group("ui_quiz")
 	var mision_ui    = get_tree().get_first_node_in_group("ui_mision_inicio")
 	var minijuego_ui = get_tree().get_first_node_in_group("ui_minijuego")
+	var tutorial_ui  = get_tree().get_first_node_in_group("ui_tutorial")
+	var crisis_ui    = get_tree().get_first_node_in_group("ui_crisis")
 
 	if (dlg and dlg.visible) or (quiz and quiz.visible) \
 			or (mision_ui and mision_ui.visible) \
-			or (minijuego_ui and minijuego_ui.visible):
+			or (minijuego_ui and minijuego_ui.visible) \
+			or (tutorial_ui and tutorial_ui.visible) \
+			or (crisis_ui and crisis_ui.visible):
 		velocity = Vector2.ZERO
 		_animar("idle_" + _dir_actual)
 		move_and_slide()
@@ -91,8 +95,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	var dlg          = get_tree().get_first_node_in_group("ui_dialogo")
 	var quiz         = get_tree().get_first_node_in_group("ui_quiz")
 	var minijuego_ui = get_tree().get_first_node_in_group("ui_minijuego")
+	var tutorial_ui2 = get_tree().get_first_node_in_group("ui_tutorial")
+	var crisis_ui2   = get_tree().get_first_node_in_group("ui_crisis")
 	if (mision_ui and mision_ui.visible) or (dlg and dlg.visible) \
-			or (quiz and quiz.visible) or (minijuego_ui and minijuego_ui.visible):
+			or (quiz and quiz.visible) or (minijuego_ui and minijuego_ui.visible) \
+			or (crisis_ui2 and crisis_ui2.visible):
+		return
+	# Tutorial maneja [E] internamente, no lo consumimos aquí
+	if tutorial_ui2 and tutorial_ui2.visible:
 		return
 
 	if npc_cercano != null:
@@ -102,10 +112,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _leer_input() -> Vector2:
 	var dir := Vector2.ZERO
-	if Input.is_action_pressed("ui_right"): dir.x =  1.0
-	if Input.is_action_pressed("ui_left"):  dir.x = -1.0
-	if Input.is_action_pressed("ui_down"):  dir.y =  1.0
-	if Input.is_action_pressed("ui_up"):    dir.y = -1.0
+	if Input.is_action_pressed("mover_derecha"):   dir.x =  1.0
+	if Input.is_action_pressed("mover_izquierda"): dir.x = -1.0
+	if Input.is_action_pressed("mover_abajo"):     dir.y =  1.0
+	if Input.is_action_pressed("mover_arriba"):    dir.y = -1.0
 	return dir
 
 
