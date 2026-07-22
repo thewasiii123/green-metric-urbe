@@ -22,11 +22,17 @@ config/icon="res://icon.svg"
 SupabaseManager="*uid://1jsl8d8caah4"
 EconomiaManager="*res://autoload/EconomiaManager.gd"
 AudioManager="*res://autoload/AudioManager.gd"
+WindowManager="*res://autoload/WindowManager.gd"
 
 [display]
 
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/resizable=true
+window/size/mode=2
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation="landscape"
 
 [input]
 

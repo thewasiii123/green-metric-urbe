@@ -56,11 +56,15 @@ class BackgroundNode extends Node2D:
 	var _hex  : Array[Vector2] = []   # tipado → p.x / p.y son float
 
 	func _ready() -> void:
-		var sz := Vector2(1280.0, 720.0)
+		# Usa el tamaño real del viewport para cubrir cualquier resolución
+		var sz := get_viewport_rect().size
+		if sz == Vector2.ZERO:
+			sz = Vector2(1280.0, 720.0)
 		for _i in 50:
 			_orbs.append(_rand_orb(sz, true))
-		var cols : int = int(sz.x / 48.0) + 1
-		var rows : int = int(sz.y / 40.0) + 1
+		# Grid hexagonal con margen extra para no dejar bordes vacíos al escalar
+		var cols : int = int(sz.x / 48.0) + 3
+		var rows : int = int(sz.y / 40.0) + 3
 		for gy in rows:
 			for gx in cols:
 				_hex.append(Vector2(gx * 48.0 + (gy % 2) * 24.0, gy * 40.0))

@@ -16,6 +16,7 @@ const DIALOGO_ESCENA            := preload("res://scenes/ui/dialogo_npc.tscn")
 const MISION_INICIO_ESCENA      := preload("res://scenes/ui/mision_inicio.gd")
 const MINIJUEGO_RESIDUOS_ESCENA := preload("res://scenes/ui/minijuego_residuos.gd")
 const TUTORIAL_ESCENA           := preload("res://scenes/ui/tutorial_onboarding.gd")
+const TOUCH_ESCENA              := preload("res://scenes/ui/touch_controls.gd")
 const CRISIS_ESCENA             := preload("res://scenes/ui/crisis_evento.gd")
 const LEADERBOARD_ESCENA        := preload("res://scenes/ui/leaderboard.gd")
 const SIMULADOR_ESCENA          := preload("res://scenes/ui/simulador_decision.gd")
@@ -459,7 +460,7 @@ func _ready() -> void:
 	SupabaseManager.modulos_cargados.connect(_on_modulos_cargados)
 	SupabaseManager.progreso_cargado.connect(_on_progreso_cargado)
 	SupabaseManager.cargar_modulos()
-	SupabaseManager.cargar_progreso()
+	# cargar_progreso se llama desde _on_modulos_cargados para no saturar el HTTPRequest
 
 	_init_sistemas_eva()
 
@@ -578,6 +579,8 @@ func _spawn_npcs() -> void:
 # ── Supabase ─────────────────────────────────────────────────
 func _on_modulos_cargados(lista: Array) -> void:
 	print("📦 Módulos cargados: %d" % lista.size())
+	# Ahora que el HTTPRequest está libre, pedimos el progreso
+	SupabaseManager.cargar_progreso()
 
 func _on_progreso_cargado(lista: Array) -> void:
 	for entrada in lista:
@@ -1193,6 +1196,10 @@ func _on_interaccion_iniciada() -> void:
 # SISTEMAS EVA — Tutorial, Crisis, Economía, Leaderboard
 # ════════════════════════════════════════════════════════════
 func _init_sistemas_eva() -> void:
+	# Controles táctiles (solo activos en móvil/touch)
+	var touch_ui := TOUCH_ESCENA.new()
+	add_child(touch_ui)
+
 	_tutorial_ui = TUTORIAL_ESCENA.new()
 	add_child(_tutorial_ui)
 	_tutorial_ui.tutorial_completado.connect(_on_tutorial_completado)

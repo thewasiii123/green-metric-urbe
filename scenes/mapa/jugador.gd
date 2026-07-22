@@ -48,6 +48,14 @@ func _physics_process(delta: float) -> void:
 			queue_redraw()
 		return
 
+	# Botón interactuar táctil
+	var touch_nodo = get_tree().get_first_node_in_group("touch_controls")
+	if touch_nodo and touch_nodo.visible and touch_nodo.interact_fired:
+		touch_nodo.interact_fired = false
+		if npc_cercano != null:
+			interaccion_iniciada.emit()
+			npc_cercano.iniciar_dialogo()
+
 	var dir := _leer_input()
 	if dir.length() > 0:
 		dir         = dir.normalized()
@@ -116,6 +124,12 @@ func _leer_input() -> Vector2:
 	if Input.is_action_pressed("mover_izquierda"): dir.x = -1.0
 	if Input.is_action_pressed("mover_abajo"):     dir.y =  1.0
 	if Input.is_action_pressed("mover_arriba"):    dir.y = -1.0
+
+	# Joystick táctil (móvil): sobreescribe solo si hay input táctil
+	var touch = get_tree().get_first_node_in_group("touch_controls")
+	if touch and touch.visible and touch.joy_dir.length() > 0.0:
+		dir = touch.joy_dir
+
 	return dir
 
 
