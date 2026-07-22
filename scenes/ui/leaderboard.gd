@@ -68,7 +68,7 @@ func _poblar_filas(data: Array) -> void:
 	for child in _rows_vbox.get_children():
 		child.queue_free()
 
-	var nombre_jugador : String = SupabaseManager.nombre_usuario if SupabaseManager.has("nombre_usuario") else ""
+	var nombre_jugador : String = SupabaseManager.nombre_usuario
 
 	for i in data.size():
 		var entrada : Dictionary = data[i]

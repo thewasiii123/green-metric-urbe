@@ -1270,47 +1270,51 @@ func _verificar_misiones_completadas() -> void:
 # BOTÓN MAPA DE CALOR (HUD)
 # ════════════════════════════════════════════════════════════
 func _crear_btn_mapa_calor() -> void:
-	var btn := Button.new()
-	btn.text = "🌡"
-	btn.tooltip_text = "Mapa de calor energético"
-	btn.custom_minimum_size = Vector2(38, 38)
-	btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	btn.offset_left   = -88
-	btn.offset_top    = 56
-	btn.offset_right  = -48
-	btn.offset_bottom = 96
-	btn.add_theme_font_size_override("font_size", 18)
-	var s := StyleBoxFlat.new()
-	s.bg_color     = Color(0.06, 0.10, 0.16, 0.92)
-	s.border_color = Color(0.72, 0.30, 0.10)
-	s.set_border_width_all(2)
-	s.set_corner_radius_all(8)
-	btn.add_theme_stylebox_override("normal", s)
-	btn.pressed.connect(func():
+	# ── Barra de herramientas inferior derecha ────────────────
+	# Posición: esquina inferior derecha, sobre la avenida de entrada.
+	# Los dos botones van juntos, lejos del sidebar y del HUD superior.
+
+	var s_base := StyleBoxFlat.new()
+	s_base.bg_color = Color(0.04, 0.08, 0.06, 0.92)
+	s_base.set_border_width_all(2)
+	s_base.set_corner_radius_all(8)
+
+	# 🌡 Mapa de calor
+	var s1 := s_base.duplicate() as StyleBoxFlat
+	s1.border_color = Color(0.85, 0.38, 0.08)
+	var btn_calor := Button.new()
+	btn_calor.text                  = "🌡"
+	btn_calor.tooltip_text          = "Mapa de calor energético"
+	btn_calor.custom_minimum_size   = Vector2(42, 42)
+	btn_calor.add_theme_font_size_override("font_size", 20)
+	btn_calor.add_theme_stylebox_override("normal", s1)
+	btn_calor.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	btn_calor.offset_left   = 8
+	btn_calor.offset_top    = -50
+	btn_calor.offset_right  = 50
+	btn_calor.offset_bottom = -8
+	btn_calor.pressed.connect(func():
 		if mapa_campus and mapa_campus.has_method("toggle_mapa_calor"):
 			mapa_campus.toggle_mapa_calor()
 		_sfx("zona"))
-	_hud_canvas.add_child(btn)
+	_hud_canvas.add_child(btn_calor)
 
-	# Botón de resultados
-	var btn_r := Button.new()
-	btn_r.text = "📊"
-	btn_r.tooltip_text = "Ver reporte GreenMetric"
-	btn_r.custom_minimum_size = Vector2(38, 38)
-	btn_r.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	btn_r.offset_left   = -132
-	btn_r.offset_top    = 56
-	btn_r.offset_right  = -92
-	btn_r.offset_bottom = 96
-	btn_r.add_theme_font_size_override("font_size", 18)
-	var s2 := StyleBoxFlat.new()
-	s2.bg_color     = Color(0.06, 0.10, 0.16, 0.92)
-	s2.border_color = Color(0.22, 0.72, 0.28)
-	s2.set_border_width_all(2)
-	s2.set_corner_radius_all(8)
-	btn_r.add_theme_stylebox_override("normal", s2)
-	btn_r.pressed.connect(_abrir_resultados)
-	_hud_canvas.add_child(btn_r)
+	# 📊 Resultados GreenMetric
+	var s2 := s_base.duplicate() as StyleBoxFlat
+	s2.border_color = Color(0.22, 0.80, 0.28)
+	var btn_res := Button.new()
+	btn_res.text                = "📊"
+	btn_res.tooltip_text        = "Reporte GreenMetric"
+	btn_res.custom_minimum_size = Vector2(42, 42)
+	btn_res.add_theme_font_size_override("font_size", 20)
+	btn_res.add_theme_stylebox_override("normal", s2)
+	btn_res.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	btn_res.offset_left   = 56
+	btn_res.offset_top    = -50
+	btn_res.offset_right  = 98
+	btn_res.offset_bottom = -8
+	btn_res.pressed.connect(_abrir_resultados)
+	_hud_canvas.add_child(btn_res)
 
 
 func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:
