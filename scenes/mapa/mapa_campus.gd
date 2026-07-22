@@ -48,17 +48,22 @@ var mostrar_calor : bool = false
 
 # Edificios con su módulo GreenMetric asociado
 const EDIFICIOS_CALOR : Array = [
-	{"rect": Rect2(624, 208, 256, 160), "mod": 2, "nombre": "Bloque E"},
-	{"rect": Rect2(896, 208, 208, 160), "mod": 1, "nombre": "Bloque F"},
-	{"rect": Rect2(0,   400, 192, 176), "mod": 1, "nombre": "Bloque G"},
+	# Fila 1  y=208..368
+	{"rect": Rect2(  0, 208, 192, 160), "mod": 5, "nombre": "Estac."},
+	{"rect": Rect2(240, 208, 176, 160), "mod": 3, "nombre": "Cafetín"},
+	{"rect": Rect2(464, 208, 208, 160), "mod": 4, "nombre": "Bibliot."},
+	{"rect": Rect2(688, 208, 160, 160), "mod": 2, "nombre": "Bloque E"},
+	{"rect": Rect2(1152,208, 256, 368), "mod": 1, "nombre": "Bloque F"},
+	# Fila 2  y=400..576
+	{"rect": Rect2(  0, 400, 192, 176), "mod": 1, "nombre": "Bloque G"},
 	{"rect": Rect2(240, 400, 176, 176), "mod": 2, "nombre": "Bloque D"},
-	{"rect": Rect2(464, 400, 160, 176), "mod": 2, "nombre": "Bloque A"},
-	{"rect": Rect2(624, 400, 256, 176), "mod": 2, "nombre": "Bloque B"},
-	{"rect": Rect2(0,   608, 192,  96), "mod": 1, "nombre": "Fotocopiado"},
-	{"rect": Rect2(240, 608, 176,  96), "mod": 2, "nombre": "Bloque C"},
-	{"rect": Rect2(464, 608, 400,  96), "mod": 6, "nombre": "Rectorado"},
-	{"rect": Rect2(896, 608, 208,  96), "mod": 4, "nombre": "Área Servicios"},
-	{"rect": Rect2(1152,608, 256,  96), "mod": 5, "nombre": "Estacionamiento"},
+	{"rect": Rect2(464, 400, 176, 176), "mod": 2, "nombre": "Bloque A"},
+	{"rect": Rect2(656, 400, 176, 176), "mod": 2, "nombre": "Bloque B"},
+	# Fila 3  y=608..704
+	{"rect": Rect2(  0, 608, 144,  96), "mod": 1, "nombre": "Fotocop."},
+	{"rect": Rect2(240, 608, 160,  96), "mod": 2, "nombre": "Bloque C"},
+	{"rect": Rect2(464, 608, 416,  96), "mod": 6, "nombre": "Rectorado"},
+	{"rect": Rect2(1152,608, 256,  96), "mod": 6, "nombre": "Área Serv."},
 ]
 
 func toggle_mapa_calor() -> void:

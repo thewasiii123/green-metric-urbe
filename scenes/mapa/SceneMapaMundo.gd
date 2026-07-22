@@ -465,7 +465,7 @@ func _construir_hud() -> void:
 	var panel_top := Panel.new()
 	panel_top.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	panel_top.offset_right  = 310.0
-	panel_top.offset_bottom = 54.0
+	panel_top.offset_bottom = 78.0
 	var ps := StyleBoxFlat.new()
 	ps.bg_color     = Color(0.04, 0.07, 0.10, 0.92)
 	ps.border_color = Color(0.20, 0.68, 0.20)
@@ -778,7 +778,7 @@ func _actualizar_hud() -> void:
 # SIDEBAR DE MÓDULOS (lado derecho, siempre visible)
 # ════════════════════════════════════════════════════════════
 func _construir_sidebar() -> void:
-	var ANCHO : float = 155.0
+	var ANCHO : float = 175.0
 	var ALTO  : float = float(SIDEBAR_MODULOS.size()) * 34.0 + 30.0
 
 	var panel := Panel.new()
@@ -1061,25 +1061,25 @@ func _init_sistemas_eva() -> void:
 
 	# EcoCredits label (esquina superior derecha)
 	_hud_creditos_lbl = Label.new()
-	_hud_creditos_lbl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_hud_creditos_lbl.offset_left   = -165
-	_hud_creditos_lbl.offset_top    =  6
-	_hud_creditos_lbl.offset_right  = -4
-	_hud_creditos_lbl.offset_bottom =  28
-	_hud_creditos_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_hud_creditos_lbl.add_theme_font_size_override("font_size", 13)
+	_hud_creditos_lbl.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_hud_creditos_lbl.offset_left   =  10
+	_hud_creditos_lbl.offset_top    =  58
+	_hud_creditos_lbl.offset_right  = 190
+	_hud_creditos_lbl.offset_bottom =  76
+	_hud_creditos_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_hud_creditos_lbl.add_theme_font_size_override("font_size", 11)
 	_hud_creditos_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.15))
 	_hud_canvas.add_child(_hud_creditos_lbl)
 
 	# Energía/Vidas label
 	_hud_energia_lbl = Label.new()
-	_hud_energia_lbl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_hud_energia_lbl.offset_left   = -165
-	_hud_energia_lbl.offset_top    =  30
-	_hud_energia_lbl.offset_right  = -4
-	_hud_energia_lbl.offset_bottom =  52
+	_hud_energia_lbl.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_hud_energia_lbl.offset_left   = 190
+	_hud_energia_lbl.offset_top    =  58
+	_hud_energia_lbl.offset_right  = 308
+	_hud_energia_lbl.offset_bottom =  76
 	_hud_energia_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_hud_energia_lbl.add_theme_font_size_override("font_size", 13)
+	_hud_energia_lbl.add_theme_font_size_override("font_size", 11)
 	_hud_energia_lbl.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
 	_hud_canvas.add_child(_hud_energia_lbl)
 
