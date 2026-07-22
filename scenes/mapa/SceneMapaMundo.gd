@@ -382,7 +382,14 @@ var _crisis_ui        : CanvasLayer = null
 var _leaderboard_ui   : CanvasLayer = null
 var _sim_decision_ui  : CanvasLayer = null
 var _resultados_ui    : CanvasLayer = null
-var _zonas_verdes     : Array       = []   # Array[Node2D]
+var _zonas_verdes        : Array       = []   # Array[Node2D]
+var _panel_zona_mejora   : Panel       = null
+var _pzm_titulo_lbl      : Label       = null
+var _pzm_nivel_lbl       : Label       = null
+var _pzm_xp_lbl          : Label       = null
+var _pzm_costo_lbl       : Label       = null
+var _pzm_btn_mejorar     : Button      = null
+var _zona_en_panel       : Node2D      = null
 var _timer_crisis     : float       = 0.0
 const _CRISIS_MIN     : float       = 90.0
 const _CRISIS_MAX     : float       = 180.0
@@ -417,6 +424,7 @@ func _ready() -> void:
 	_construir_sidebar()
 	_construir_notificacion_zona()
 	_construir_panel_completado()
+	_construir_panel_zona_mejora()
 	_actualizar_hud()
 
 	# Conectar señal de interacción del jugador para efecto de cámara
@@ -960,6 +968,149 @@ func _construir_panel_completado() -> void:
 	barra_bg.add_child(_complete_barra)
 
 
+# ════════════════════════════════════════════════════════════
+# PANEL DE MEJORA DE ZONA VERDE
+# ════════════════════════════════════════════════════════════
+func _construir_panel_zona_mejora() -> void:
+	_panel_zona_mejora = Panel.new()
+	_panel_zona_mejora.set_anchors_preset(Control.PRESET_CENTER)
+	_panel_zona_mejora.custom_minimum_size = Vector2(320, 220)
+	_panel_zona_mejora.offset_left   = -160
+	_panel_zona_mejora.offset_top    = -110
+	_panel_zona_mejora.offset_right  =  160
+	_panel_zona_mejora.offset_bottom =  110
+	var ps := StyleBoxFlat.new()
+	ps.bg_color     = Color(0.04, 0.09, 0.06, 0.97)
+	ps.border_color = Color(0.28, 0.85, 0.32)
+	ps.set_border_width_all(3)
+	ps.set_corner_radius_all(14)
+	ps.shadow_color = Color(0.18, 0.72, 0.22, 0.50)
+	ps.shadow_size  = 18
+	_panel_zona_mejora.add_theme_stylebox_override("panel", ps)
+	_panel_zona_mejora.visible = false
+	_hud_canvas.add_child(_panel_zona_mejora)
+
+	var mg := MarginContainer.new()
+	mg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for m in ["margin_left","margin_right","margin_top","margin_bottom"]:
+		mg.add_theme_constant_override(m, 20)
+	_panel_zona_mejora.add_child(mg)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	mg.add_child(vbox)
+
+	_pzm_titulo_lbl = Label.new()
+	_pzm_titulo_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pzm_titulo_lbl.add_theme_font_size_override("font_size", 15)
+	_pzm_titulo_lbl.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
+	vbox.add_child(_pzm_titulo_lbl)
+
+	_pzm_nivel_lbl = Label.new()
+	_pzm_nivel_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pzm_nivel_lbl.add_theme_font_size_override("font_size", 13)
+	_pzm_nivel_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.22))
+	vbox.add_child(_pzm_nivel_lbl)
+
+	_pzm_xp_lbl = Label.new()
+	_pzm_xp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pzm_xp_lbl.add_theme_font_size_override("font_size", 11)
+	_pzm_xp_lbl.add_theme_color_override("font_color", Color(0.65, 0.85, 0.65))
+	vbox.add_child(_pzm_xp_lbl)
+
+	_pzm_costo_lbl = Label.new()
+	_pzm_costo_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pzm_costo_lbl.add_theme_font_size_override("font_size", 11)
+	_pzm_costo_lbl.add_theme_color_override("font_color", Color(0.85, 0.75, 0.20))
+	vbox.add_child(_pzm_costo_lbl)
+
+	_pzm_btn_mejorar = Button.new()
+	_pzm_btn_mejorar.custom_minimum_size = Vector2(0, 40)
+	_pzm_btn_mejorar.add_theme_font_size_override("font_size", 13)
+	var s_m := StyleBoxFlat.new()
+	s_m.bg_color     = Color(0.10, 0.28, 0.12)
+	s_m.border_color = Color(0.28, 0.80, 0.32)
+	s_m.set_border_width_all(2)
+	s_m.set_corner_radius_all(8)
+	_pzm_btn_mejorar.add_theme_stylebox_override("normal", s_m)
+	_pzm_btn_mejorar.pressed.connect(_on_btn_mejorar_zona)
+	vbox.add_child(_pzm_btn_mejorar)
+
+	var btn_cerrar := Button.new()
+	btn_cerrar.text = "Cerrar"
+	btn_cerrar.custom_minimum_size = Vector2(0, 34)
+	btn_cerrar.add_theme_font_size_override("font_size", 11)
+	var s_c := StyleBoxFlat.new()
+	s_c.bg_color     = Color(0.12, 0.06, 0.06)
+	s_c.border_color = Color(0.55, 0.20, 0.20)
+	s_c.set_border_width_all(1)
+	s_c.set_corner_radius_all(6)
+	btn_cerrar.add_theme_stylebox_override("normal", s_c)
+	btn_cerrar.pressed.connect(_cerrar_panel_zona)
+	vbox.add_child(btn_cerrar)
+
+
+func _mostrar_panel_zona(zona: Node2D) -> void:
+	_zona_en_panel = zona
+	var nombre  : String = zona.nombre_zona
+	var lvl     : int    = zona.nivel
+	var xp_p    : int    = zona.xp_pasiva_actual()
+	var n_lvl   : String = zona.nombre_nivel_actual()
+	var iconos  : Array  = ["🌱", "🌿", "🌳"]
+
+	_pzm_titulo_lbl.text = "%s  %s" % [iconos[lvl - 1], nombre]
+	_pzm_nivel_lbl.text  = "Nivel %d — %s" % [lvl, n_lvl]
+	_pzm_xp_lbl.text     = "+%d XP / minuto   |   Módulo: %d" % [xp_p, zona.modulo_id]
+
+	if zona.puede_mejorar():
+		var costo : int    = zona.costo_siguiente()
+		var sig   : String = iconos[lvl]   # siguiente nivel
+		_pzm_costo_lbl.text      = "Costo: %d EC  →  %s Nivel %d" % [costo, sig, lvl + 1]
+		_pzm_btn_mejorar.text    = "⬆ Mejorar zona  (%d EC)" % costo
+		_pzm_btn_mejorar.visible = true
+	else:
+		_pzm_costo_lbl.text      = "Nivel máximo alcanzado"
+		_pzm_btn_mejorar.visible = false
+
+	_panel_zona_mejora.modulate.a = 0.0
+	_panel_zona_mejora.visible    = true
+	var tw := create_tween()
+	tw.tween_property(_panel_zona_mejora, "modulate:a", 1.0, 0.18)
+
+
+func _cerrar_panel_zona() -> void:
+	if not is_instance_valid(_panel_zona_mejora): return
+	var tw := create_tween()
+	tw.tween_property(_panel_zona_mejora, "modulate:a", 0.0, 0.15)
+	tw.tween_callback(func(): _panel_zona_mejora.visible = false)
+	_zona_en_panel = null
+
+
+func _on_btn_mejorar_zona() -> void:
+	if not is_instance_valid(_zona_en_panel): return
+	var zona  : Node2D = _zona_en_panel
+	var costo : int    = zona.costo_siguiente()
+	if EconomiaManager.ecocredits < costo:
+		_mostrar_notificacion_zona("✗", "Faltan %d EC" % (costo - EconomiaManager.ecocredits),
+				Color(1.0, 0.35, 0.35))
+		return
+	EconomiaManager.gastar_creditos(costo)
+	var lvl_antes : int = zona.nivel
+	zona.aplicar_mejora()
+	# Recompensas inmediatas
+	var xp_bonus : int   = zona.XP_MEJORA_INM[lvl_antes - 1]
+	var prog_bon : float = zona.PROG_MEJORA[lvl_antes - 1]
+	_aplicar_xp(xp_bonus, "mejora_zona_%s" % zona.nombre_zona.to_lower().replace(" ","_"))
+	var mod_id  : int   = zona.modulo_id
+	var nuevo   : float = clampf(float(_progreso_modulos.get(mod_id, 0.0)) + prog_bon, 0.0, 1.0)
+	_progreso_modulos[mod_id] = nuevo
+	_actualizar_sidebar()
+	_sfx("xp_bonus")
+	_mostrar_notificacion_zona("🌳", "%s → Nivel %d  (+%d XP)" % [zona.nombre_zona, zona.nivel, xp_bonus],
+			Color(0.30, 1.0, 0.42))
+	_mostrar_panel_zona(zona)   # refresca el panel con el nuevo nivel
+
+
 func _mostrar_mision_completada(mision_id: String, xp_ganado: int) -> void:
 	if not is_instance_valid(_complete_panel): return
 	var nombre_mision : String = mision_id.replace("_", " ").capitalize()
@@ -1223,15 +1374,20 @@ func _on_zona_verde_adoptada(nombre_zona: String, modulo_id: int) -> void:
 
 func _verificar_zona_verde_cercana() -> void:
 	var radio_interaccion : float = 55.0
+	var nombre_j : String = SupabaseManager.nombre_usuario
+	if nombre_j.is_empty(): nombre_j = "Eco-Ranger"
 	for zona in _zonas_verdes:
 		var z : Node2D = zona as Node2D
 		if not is_instance_valid(z): continue
-		if z.esta_adoptada(): continue
-		if jugador.global_position.distance_to(z.global_position) <= radio_interaccion:
-			var nombre_j : String = SupabaseManager.nombre_usuario
-			if nombre_j.is_empty(): nombre_j = "Eco-Ranger"
+		if jugador.global_position.distance_to(z.global_position) > radio_interaccion:
+			continue
+		if not z.esta_adoptada():
 			z.intentar_adoptar(nombre_j)
-			return
+		elif z.es_mia(nombre_j):
+			_mostrar_panel_zona(z)
+		else:
+			_mostrar_notificacion_zona("🔒", "Ya adoptada por " + z.adoptado_por, Color(0.80, 0.55, 0.20))
+		return
 
 
 # ════════════════════════════════════════════════════════════
