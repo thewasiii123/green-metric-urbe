@@ -44,35 +44,21 @@ func _cerrar() -> void:
 func _cargar_ranking() -> void:
 	if _cargando: return
 	_cargando = true
-	_estado_lbl.text = "Cargando ranking..."
+	_estado_lbl.text   = "Cargando ranking..."
 	_rows_vbox.visible = false
-
-	var url : String = "%s/rest/v1/progreso?select=user_id,nombre,xp_total&order=xp_total.desc&limit=10" % SUPABASE_URL
-	var headers : PackedStringArray = PackedStringArray([
-		"apikey: %s" % SUPABASE_KEY,
-		"Authorization: Bearer %s" % SUPABASE_KEY,
-		"Content-Type: application/json"
-	])
-	var err : int = _http.request(url, headers, HTTPClient.METHOD_GET)
-	if err != OK:
-		_estado_lbl.text = "Error de conexión (%d)" % err
-		_cargando = false
+	# Delegamos la petición al singleton centralizado
+	SupabaseManager.ranking_cargado.connect(_on_ranking_cargado, CONNECT_ONE_SHOT)
+	SupabaseManager.cargar_ranking()
 
 
-func _on_request_completed(_result: int, code: int, _hdrs: PackedStringArray, body: PackedByteArray) -> void:
+func _on_ranking_cargado(lista: Array) -> void:
 	_cargando = false
-	if code != 200:
-		_estado_lbl.text = "No se pudo cargar el ranking (HTTP %d)" % code
-		return
+	_poblar_filas(lista)
 
-	var json := JSON.new()
-	var parse_err : int = json.parse(body.get_string_from_utf8())
-	if parse_err != OK:
-		_estado_lbl.text = "Error parseando datos"
-		return
 
-	var data : Array = json.get_data()
-	_poblar_filas(data)
+func _on_request_completed(_result: int, _code: int, _hdrs: PackedStringArray, _body: PackedByteArray) -> void:
+	# Ya no se usa — cargar_ranking delega en SupabaseManager
+	_cargando = false
 
 
 func _poblar_filas(data: Array) -> void:

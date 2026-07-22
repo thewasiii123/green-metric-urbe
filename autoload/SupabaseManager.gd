@@ -17,11 +17,13 @@ signal recuperacion_fallida(error: String)
 signal modulos_cargados(lista: Array)
 signal progreso_cargado(lista: Array)
 signal progreso_guardado()
+signal ranking_cargado(lista: Array)
 signal error_red(mensaje: String)
 
 # ── Estado interno ───────────────────────────────────────────
 var jwt_token      : String = ""
 var user_id        : String = ""
+var nombre_usuario : String = ""
 var _http          : HTTPRequest
 var _accion_actual : String = ""
 
@@ -77,6 +79,12 @@ func cargar_progreso() -> void:
 	_http.request(url, _headers_auth(), HTTPClient.METHOD_GET)
 
 
+func cargar_ranking() -> void:
+	_accion_actual = "cargar_ranking"
+	var url : String = SUPABASE_URL + "/rest/v1/progreso_estudiante?select=user_id,xp_ganada,completado&order=xp_ganada.desc"
+	_http.request(url, _headers_anon(), HTTPClient.METHOD_GET)
+
+
 func guardar_progreso(modulo_id: int, puntaje: int, xp: int, completado: bool) -> void:
 	if jwt_token.is_empty():
 		push_error("SupabaseManager: Debes hacer login primero.")
@@ -109,9 +117,10 @@ func _on_respuesta_http(result: int, code: int, _hdrs: PackedStringArray, body: 
 		"login"          : _procesar_login(code, datos)
 		"registro"       : _procesar_registro(code, datos)
 		"recuperar"      : _procesar_recuperar(code, datos)
-		"cargar_modulos" : _procesar_modulos(code, datos)
-		"cargar_progreso": _procesar_progreso(code, datos)
+		"cargar_modulos"  : _procesar_modulos(code, datos)
+		"cargar_progreso" : _procesar_progreso(code, datos)
 		"guardar_progreso": _procesar_guardar(code)
+		"cargar_ranking"  : _procesar_ranking(code, datos)
 
 	_accion_actual = ""
 
@@ -119,8 +128,11 @@ func _on_respuesta_http(result: int, code: int, _hdrs: PackedStringArray, body: 
 func _procesar_login(code: int, datos: Variant) -> void:
 	if code == 200 and datos is Dictionary and datos.has("access_token"):
 		jwt_token = datos.get("access_token", "")
-		user_id   = datos.get("user", {}).get("id", "")
-		emit_signal("login_exitoso", datos.get("user", {}))
+		var user : Dictionary = datos.get("user", {})
+		user_id        = user.get("id", "")
+		var meta : Dictionary = user.get("user_metadata", {})
+		nombre_usuario = str(meta.get("nombre", meta.get("name", user.get("email", "Eco-Ranger"))))
+		emit_signal("login_exitoso", user)
 	else:
 		var msg : String = "Credenciales incorrectas."
 		if datos is Dictionary:
@@ -171,6 +183,26 @@ func _procesar_guardar(code: int) -> void:
 		emit_signal("progreso_guardado")
 	else:
 		emit_signal("error_red", "No se pudo guardar el progreso.")
+
+
+func _procesar_ranking(code: int, datos: Variant) -> void:
+	if code == 200 and datos is Array:
+		# Agrupa xp por user_id del lado del cliente
+		var totales : Dictionary = {}
+		for fila in datos:
+			if fila is not Dictionary: continue
+			var uid : String = str(fila.get("user_id", ""))
+			var xp  : int    = int(fila.get("xp_ganada", 0))
+			totales[uid] = int(totales.get(uid, 0)) + xp
+		# Convierte a array ordenado
+		var lista : Array = []
+		for uid in totales.keys():
+			lista.append({"user_id": uid, "xp_total": totales[uid],
+						  "nombre": uid.left(8) + "…"})
+		lista.sort_custom(func(a, b): return int(a["xp_total"]) > int(b["xp_total"]))
+		emit_signal("ranking_cargado", lista)
+	else:
+		emit_signal("error_red", "No se pudo cargar el ranking.")
 
 
 # ── Headers ───────────────────────────────────────────────────

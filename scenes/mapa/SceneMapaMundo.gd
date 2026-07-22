@@ -19,6 +19,8 @@ const TUTORIAL_ESCENA           := preload("res://scenes/ui/tutorial_onboarding.
 const CRISIS_ESCENA             := preload("res://scenes/ui/crisis_evento.gd")
 const LEADERBOARD_ESCENA        := preload("res://scenes/ui/leaderboard.gd")
 const SIMULADOR_ESCENA          := preload("res://scenes/ui/simulador_decision.gd")
+const RESULTADOS_ESCENA         := preload("res://scenes/ui/resultados_greenmetric.gd")
+const ZONA_VERDE_ESCENA         := preload("res://scenes/mapa/zona_verde.gd")
 
 # ── Sistema de niveles ───────────────────────────────────────
 const NIVELES : Array = [
@@ -379,6 +381,8 @@ var _tutorial_ui      : CanvasLayer = null
 var _crisis_ui        : CanvasLayer = null
 var _leaderboard_ui   : CanvasLayer = null
 var _sim_decision_ui  : CanvasLayer = null
+var _resultados_ui    : CanvasLayer = null
+var _zonas_verdes     : Array       = []   # Array[Node2D]
 var _timer_crisis     : float       = 0.0
 const _CRISIS_MIN     : float       = 90.0
 const _CRISIS_MAX     : float       = 180.0
@@ -613,6 +617,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if _zona_activa != "":
 		_mostrar_pantalla_mision()
+	else:
+		_verificar_zona_verde_cercana()
 
 
 # ── Pantalla de misión ───────────────────────────────────────
@@ -672,11 +678,15 @@ func _aplicar_xp(xp: int, mision_id: String) -> void:
 	var nivel_antes := _nivel_actual
 	_xp_total += xp
 	_actualizar_hud()
-	_flotar_xp(xp)
+	if xp > 0:
+		_flotar_xp(xp)
+		_sfx("xp_bonus" if xp >= 20 else "xp")
+
 	print("✅ XP ganada: %d  |  Total: %d  |  Misión: %s" % [xp, _xp_total, mision_id])
 
 	if _nivel_actual > nivel_antes:
 		_mostrar_celebracion(NIVELES[_nivel_actual]["nombre"])
+		_sfx("nivel")
 
 	# Actualiza progreso de la zona/misión completada y refresca mapa
 	for zona_key in ZONA_A_MISION.keys():
@@ -694,6 +704,8 @@ func _aplicar_xp(xp: int, mision_id: String) -> void:
 			# Persistir en Supabase
 			if SupabaseManager and SupabaseManager.has_method("guardar_progreso"):
 				SupabaseManager.guardar_progreso(mod_id, xp, int(nuevo * 100), nuevo >= 1.0)
+			_sfx("mision")
+			_verificar_misiones_completadas()
 			break
 
 
@@ -1039,6 +1051,14 @@ func _init_sistemas_eva() -> void:
 	add_child(_sim_decision_ui)
 	_sim_decision_ui.decision_tomada.connect(_on_decision_tomada)
 
+	# Pantalla de resultados GreenMetric
+	_resultados_ui = RESULTADOS_ESCENA.new()
+	add_child(_resultados_ui)
+	_resultados_ui.cerrar_resultados.connect(func(): pass)
+
+	# Zonas verdes adoptables
+	_spawn_zonas_verdes()
+
 	# EcoCredits label (esquina superior derecha)
 	_hud_creditos_lbl = Label.new()
 	_hud_creditos_lbl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -1094,6 +1114,8 @@ func _init_sistemas_eva() -> void:
 	btn_lb.add_theme_stylebox_override("normal", s_lb)
 	btn_lb.pressed.connect(func(): _leaderboard_ui.mostrar())
 	_hud_canvas.add_child(btn_lb)
+
+	_crear_btn_mapa_calor()
 
 	# Señales EconomiaManager
 	EconomiaManager.ecocredits_cambiados.connect(_on_creditos_cambiados)
@@ -1166,6 +1188,129 @@ func _on_decision_tomada(modulo_id: int, delta: float) -> void:
 		mapa_campus.actualizar_modulo(modulo_id, nuevo)
 	if delta > 0.0:
 		EconomiaManager.ganar_creditos(15)
+
+
+# ════════════════════════════════════════════════════════════
+# HELPER AUDIO (compatible antes de que el IDE rescane project.godot)
+# ════════════════════════════════════════════════════════════
+func _sfx(nombre: String) -> void:
+	var am := get_node_or_null("/root/AudioManager")
+	if am:
+		am.tocar(nombre)
+
+
+# ════════════════════════════════════════════════════════════
+# ZONAS VERDES ADOPTABLES
+# ════════════════════════════════════════════════════════════
+const DATOS_ZONAS_VERDES : Array = [
+	{"nombre": "Lago URBE",        "pos": Vector2(200,  80), "mod": 4},
+	{"nombre": "Jardín Bloque G",  "pos": Vector2( 96, 490), "mod": 1},
+	{"nombre": "Plaza Central",    "pos": Vector2(752, 300), "mod": 1},
+	{"nombre": "Área Cafetín",     "pos": Vector2(752, 490), "mod": 3},
+	{"nombre": "Zona Deportiva",   "pos": Vector2(1260, 490), "mod": 5},
+]
+
+func _spawn_zonas_verdes() -> void:
+	for dato : Dictionary in DATOS_ZONAS_VERDES:
+		var zona := ZONA_VERDE_ESCENA.new()
+		zona.nombre_zona = dato["nombre"]
+		zona.modulo_id   = dato["mod"]
+		zona.position    = dato["pos"]
+		add_child(zona)
+		zona.zona_adoptada.connect(_on_zona_verde_adoptada)
+		_zonas_verdes.append(zona)
+
+
+func _on_zona_verde_adoptada(nombre_zona: String, modulo_id: int) -> void:
+	var delta : float = 0.06
+	var nuevo : float = clampf(float(_progreso_modulos.get(modulo_id, 0.0)) + delta, 0.0, 1.0)
+	_progreso_modulos[modulo_id] = nuevo
+	_actualizar_sidebar()
+	if mapa_campus and mapa_campus.has_method("actualizar_modulo"):
+		mapa_campus.actualizar_modulo(modulo_id, nuevo)
+	_aplicar_xp(15, "adopcion_%s" % nombre_zona.to_lower().replace(" ", "_"))
+	_mostrar_notificacion_zona("♥", "Adoptaste: " + nombre_zona, Color(0.28, 0.90, 0.40))
+	_sfx("adoptar")
+	EconomiaManager.ganar_creditos(10)
+
+
+func _verificar_zona_verde_cercana() -> void:
+	var radio_interaccion : float = 55.0
+	for zona in _zonas_verdes:
+		var z : Node2D = zona as Node2D
+		if not is_instance_valid(z): continue
+		if z.esta_adoptada(): continue
+		if jugador.global_position.distance_to(z.global_position) <= radio_interaccion:
+			var nombre_j : String = SupabaseManager.nombre_usuario
+			if nombre_j.is_empty(): nombre_j = "Eco-Ranger"
+			z.intentar_adoptar(nombre_j)
+			return
+
+
+# ════════════════════════════════════════════════════════════
+# RESULTADOS GREENMETRIC
+# ════════════════════════════════════════════════════════════
+func _abrir_resultados() -> void:
+	if not is_instance_valid(_resultados_ui): return
+	_resultados_ui.actualizar_xp(_xp_total)
+	_resultados_ui.mostrar(_progreso_modulos, _xp_total)
+
+
+func _verificar_misiones_completadas() -> void:
+	var total_completadas : int = 0
+	for mod_id in _progreso_modulos.keys():
+		if float(_progreso_modulos[mod_id]) >= 0.80:
+			total_completadas += 1
+	if total_completadas >= 6:
+		await get_tree().create_timer(1.5).timeout
+		_abrir_resultados()
+
+
+# ════════════════════════════════════════════════════════════
+# BOTÓN MAPA DE CALOR (HUD)
+# ════════════════════════════════════════════════════════════
+func _crear_btn_mapa_calor() -> void:
+	var btn := Button.new()
+	btn.text = "🌡"
+	btn.tooltip_text = "Mapa de calor energético"
+	btn.custom_minimum_size = Vector2(38, 38)
+	btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	btn.offset_left   = -88
+	btn.offset_top    = 56
+	btn.offset_right  = -48
+	btn.offset_bottom = 96
+	btn.add_theme_font_size_override("font_size", 18)
+	var s := StyleBoxFlat.new()
+	s.bg_color     = Color(0.06, 0.10, 0.16, 0.92)
+	s.border_color = Color(0.72, 0.30, 0.10)
+	s.set_border_width_all(2)
+	s.set_corner_radius_all(8)
+	btn.add_theme_stylebox_override("normal", s)
+	btn.pressed.connect(func():
+		if mapa_campus and mapa_campus.has_method("toggle_mapa_calor"):
+			mapa_campus.toggle_mapa_calor()
+		_sfx("zona"))
+	_hud_canvas.add_child(btn)
+
+	# Botón de resultados
+	var btn_r := Button.new()
+	btn_r.text = "📊"
+	btn_r.tooltip_text = "Ver reporte GreenMetric"
+	btn_r.custom_minimum_size = Vector2(38, 38)
+	btn_r.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	btn_r.offset_left   = -132
+	btn_r.offset_top    = 56
+	btn_r.offset_right  = -92
+	btn_r.offset_bottom = 96
+	btn_r.add_theme_font_size_override("font_size", 18)
+	var s2 := StyleBoxFlat.new()
+	s2.bg_color     = Color(0.06, 0.10, 0.16, 0.92)
+	s2.border_color = Color(0.22, 0.72, 0.28)
+	s2.set_border_width_all(2)
+	s2.set_corner_radius_all(8)
+	btn_r.add_theme_stylebox_override("normal", s2)
+	btn_r.pressed.connect(_abrir_resultados)
+	_hud_canvas.add_child(btn_r)
 
 
 func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:

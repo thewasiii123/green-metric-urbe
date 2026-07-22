@@ -44,9 +44,62 @@ var impacto : Dictionary = {
 	6: 0.55,   # Educación
 }
 
+var mostrar_calor : bool = false
+
+# Edificios con su módulo GreenMetric asociado
+const EDIFICIOS_CALOR : Array = [
+	{"rect": Rect2(624, 208, 256, 160), "mod": 2, "nombre": "Bloque E"},
+	{"rect": Rect2(896, 208, 208, 160), "mod": 1, "nombre": "Bloque F"},
+	{"rect": Rect2(0,   400, 192, 176), "mod": 1, "nombre": "Bloque G"},
+	{"rect": Rect2(240, 400, 176, 176), "mod": 2, "nombre": "Bloque D"},
+	{"rect": Rect2(464, 400, 160, 176), "mod": 2, "nombre": "Bloque A"},
+	{"rect": Rect2(624, 400, 256, 176), "mod": 2, "nombre": "Bloque B"},
+	{"rect": Rect2(0,   608, 192,  96), "mod": 1, "nombre": "Fotocopiado"},
+	{"rect": Rect2(240, 608, 176,  96), "mod": 2, "nombre": "Bloque C"},
+	{"rect": Rect2(464, 608, 400,  96), "mod": 6, "nombre": "Rectorado"},
+	{"rect": Rect2(896, 608, 208,  96), "mod": 4, "nombre": "Área Servicios"},
+	{"rect": Rect2(1152,608, 256,  96), "mod": 5, "nombre": "Estacionamiento"},
+]
+
+func toggle_mapa_calor() -> void:
+	mostrar_calor = not mostrar_calor
+	queue_redraw()
+
 func actualizar_modulo(modulo_id: int, nuevo_progreso: float) -> void:
 	impacto[modulo_id] = clampf(nuevo_progreso, 0.0, 1.0)
 	queue_redraw()
+
+func _dibujar_mapa_calor(font: Font) -> void:
+	for info : Dictionary in EDIFICIOS_CALOR:
+		var mod_id : int   = int(info["mod"])
+		var rect   : Rect2 = info["rect"]
+		var pct    : float = clampf(float(impacto.get(mod_id, 0.5)), 0.0, 1.0)
+		# Color: rojo → amarillo → verde según porcentaje
+		var col : Color
+		if pct < 0.5:
+			col = Color(0.90, pct * 1.8, 0.05, 0.42)
+		else:
+			col = Color((1.0 - pct) * 1.8, 0.85, 0.05, 0.42)
+		draw_rect(rect, col)
+		# Borde indicador
+		draw_rect(rect, Color(col.r, col.g, col.b, 0.70), false, 2.0)
+		# Porcentaje centrado
+		var txt  : String  = "%d%%" % int(pct * 100)
+		var tpos : Vector2 = rect.get_center() + Vector2(-10, -6)
+		draw_string(font, tpos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10,
+					Color(1, 1, 1, 0.90))
+	# Leyenda
+	var lx : float = 10.0
+	var ly : float = 168.0
+	draw_rect(Rect2(lx, ly, 100, 16), Color(0, 0, 0, 0.55))
+	draw_string(font, Vector2(lx + 3, ly + 12), "MAPA DE CALOR",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(1, 1, 0.4, 0.90))
+	draw_rect(Rect2(lx,      ly + 18, 32, 8), Color(0.90, 0.15, 0.05, 0.75))
+	draw_string(font, Vector2(lx + 35, ly + 26), "Bajo", HORIZONTAL_ALIGNMENT_LEFT, -1, 7, Color.WHITE)
+	draw_rect(Rect2(lx + 60, ly + 18, 32, 8), Color(0.90, 0.80, 0.05, 0.75))
+	draw_string(font, Vector2(lx + 95, ly + 26), "Medio", HORIZONTAL_ALIGNMENT_LEFT, -1, 7, Color.WHITE)
+	draw_rect(Rect2(lx + 130,ly + 18, 32, 8), Color(0.15, 0.85, 0.15, 0.75))
+	draw_string(font, Vector2(lx + 165,ly + 26), "Alto", HORIZONTAL_ALIGNMENT_LEFT, -1, 7, Color.WHITE)
 
 func _color_edif(modulo_id: int, base: Color) -> Color:
 	if not impacto.has(modulo_id):
@@ -267,6 +320,10 @@ func _draw() -> void:
 	draw_circle(Vector2(744, 736), 22, C_AMARILLO)
 	draw_arc(Vector2(744, 736), 22, 0.0, TAU, 32, C_TECHO, 2.5)
 	_draw_str(font, "URBE", Vector2(744, 740), C_AZUL_OS, 9)
+
+	# ── MAPA DE CALOR (opcional, encima de todo) ──────────────
+	if mostrar_calor:
+		_dibujar_mapa_calor(font)
 
 
 # ── CONTENEDORES DE RECICLAJE ─────────────────────────────
