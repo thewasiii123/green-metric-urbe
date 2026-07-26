@@ -22,6 +22,7 @@ const LEADERBOARD_ESCENA        := preload("res://scenes/ui/leaderboard.gd")
 const SIMULADOR_ESCENA          := preload("res://scenes/ui/simulador_decision.gd")
 const RESULTADOS_ESCENA         := preload("res://scenes/ui/resultados_greenmetric.gd")
 const ZONA_VERDE_ESCENA         := preload("res://scenes/mapa/zona_verde.gd")
+const CONTENEDOR_ESCENA         := preload("res://scenes/mapa/contenedor_basura.gd")
 
 # ── Sistema de niveles ───────────────────────────────────────
 const NIVELES : Array = [
@@ -391,6 +392,16 @@ var _pzm_xp_lbl          : Label       = null
 var _pzm_costo_lbl       : Label       = null
 var _pzm_btn_mejorar     : Button      = null
 var _zona_en_panel       : Node2D      = null
+
+# ── Contenedores de basura ────────────────────────────────────
+var _contenedores        : Array    = []
+var _panel_contenedor    : Panel    = null
+var _pc_titulo_lbl       : Label    = null
+var _pc_barra_bg         : ColorRect = null
+var _pc_barra_fill       : ColorRect = null
+var _pc_estado_lbl       : Label    = null
+var _pc_btn_servicio     : Button   = null
+var _contenedor_en_panel : Node2D   = null
 var _timer_crisis     : float       = 0.0
 const _CRISIS_MIN     : float       = 90.0
 const _CRISIS_MAX     : float       = 180.0
@@ -426,6 +437,7 @@ func _ready() -> void:
 	_construir_notificacion_zona()
 	_construir_panel_completado()
 	_construir_panel_zona_mejora()
+	_construir_panel_contenedor()
 	_actualizar_hud()
 
 	# Conectar señal de interacción del jugador para efecto de cámara
@@ -626,9 +638,14 @@ func _input(event: InputEvent) -> void:
 		return
 	if _minijuego_residuos and _minijuego_residuos.visible:
 		return
+	if _panel_contenedor and _panel_contenedor.visible:
+		_cerrar_panel_contenedor()
+		return
 	if _zona_activa != "":
 		_mostrar_pantalla_mision()
 	else:
+		if _verificar_contenedor_cercano():
+			return
 		_verificar_zona_verde_cercana()
 
 
@@ -1224,6 +1241,9 @@ func _init_sistemas_eva() -> void:
 	# Zonas verdes adoptables
 	_spawn_zonas_verdes()
 
+	# Contenedores de basura
+	_spawn_contenedores()
+
 	# EcoCredits label (esquina superior derecha)
 	_hud_creditos_lbl = Label.new()
 	_hud_creditos_lbl.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -1472,6 +1492,209 @@ func _crear_btn_mapa_calor() -> void:
 		btn.offset_bottom = -8
 		btn.pressed.connect(d["accion"])
 		_hud_canvas.add_child(btn)
+
+
+# ════════════════════════════════════════════════════════════
+# CONTENEDORES DE BASURA
+# ════════════════════════════════════════════════════════════
+const DATOS_CONTENEDORES : Array = [
+	# Norte del Cafetín (franja norte, y≈185)
+	{"nombre": "Cafetín",        "pos": Vector2(328, 185)},
+	# Norte del Bloque A (franja norte, y≈185)
+	{"nombre": "Bloque A",       "pos": Vector2(552, 185)},
+	# Corredor oeste fila-2 (x=192..240, entre Bloque G y Bloque D)
+	{"nombre": "Corredor Oeste", "pos": Vector2(216, 490)},
+	# Plaza Central (área abierta este del campus)
+	{"nombre": "Plaza Central",  "pos": Vector2(920, 400)},
+	# Avenida URBE (sur del campus, y>704)
+	{"nombre": "Avenida URBE",   "pos": Vector2(880, 740)},
+]
+
+func _spawn_contenedores() -> void:
+	for dato : Dictionary in DATOS_CONTENEDORES:
+		var c := CONTENEDOR_ESCENA.new()
+		c.nombre_bin = dato["nombre"]
+		c.position   = dato["pos"]
+		c.z_index    = 2
+		add_child(c)
+		c.vaciado.connect(_on_contenedor_vaciado.bind(c))
+		_contenedores.append(c)
+	print("🗑 %d contenedores instanciados" % _contenedores.size())
+
+
+func _construir_panel_contenedor() -> void:
+	_panel_contenedor = Panel.new()
+	_panel_contenedor.set_anchors_preset(Control.PRESET_CENTER)
+	_panel_contenedor.custom_minimum_size = Vector2(340, 210)
+	_panel_contenedor.offset_left   = -170
+	_panel_contenedor.offset_top    = -105
+	_panel_contenedor.offset_right  =  170
+	_panel_contenedor.offset_bottom =  105
+	var ps := StyleBoxFlat.new()
+	ps.bg_color     = Color(0.06, 0.06, 0.08, 0.97)
+	ps.border_color = Color(0.55, 0.42, 0.12)
+	ps.set_border_width_all(3)
+	ps.set_corner_radius_all(14)
+	ps.shadow_color = Color(0.40, 0.30, 0.05, 0.50)
+	ps.shadow_size  = 16
+	_panel_contenedor.add_theme_stylebox_override("panel", ps)
+	_panel_contenedor.visible = false
+	_hud_canvas.add_child(_panel_contenedor)
+
+	var mg := MarginContainer.new()
+	mg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for m in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		mg.add_theme_constant_override(m, 20)
+	_panel_contenedor.add_child(mg)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	mg.add_child(vbox)
+
+	# Título
+	_pc_titulo_lbl = Label.new()
+	_pc_titulo_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pc_titulo_lbl.add_theme_font_size_override("font_size", 15)
+	_pc_titulo_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30))
+	vbox.add_child(_pc_titulo_lbl)
+
+	# Barra de llenado
+	_pc_barra_bg = ColorRect.new()
+	_pc_barra_bg.custom_minimum_size = Vector2(280, 16)
+	_pc_barra_bg.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_pc_barra_bg.color = Color(0.12, 0.10, 0.06)
+	vbox.add_child(_pc_barra_bg)
+
+	_pc_barra_fill = ColorRect.new()
+	_pc_barra_fill.size = Vector2(0, 16)
+	_pc_barra_fill.color = Color(0.28, 0.72, 0.22)
+	_pc_barra_bg.add_child(_pc_barra_fill)
+
+	# Estado / porcentaje
+	_pc_estado_lbl = Label.new()
+	_pc_estado_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pc_estado_lbl.add_theme_font_size_override("font_size", 12)
+	_pc_estado_lbl.add_theme_color_override("font_color", Color(0.80, 0.80, 0.80))
+	vbox.add_child(_pc_estado_lbl)
+
+	# Botón llamar servicio
+	_pc_btn_servicio = Button.new()
+	_pc_btn_servicio.custom_minimum_size = Vector2(0, 40)
+	_pc_btn_servicio.add_theme_font_size_override("font_size", 13)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color     = Color(0.12, 0.22, 0.10)
+	sb.border_color = Color(0.35, 0.78, 0.28)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(8)
+	_pc_btn_servicio.add_theme_stylebox_override("normal", sb)
+	_pc_btn_servicio.pressed.connect(_on_btn_servicio_contenedor)
+	vbox.add_child(_pc_btn_servicio)
+
+	# Botón cerrar
+	var btn_c := Button.new()
+	btn_c.text = "Cerrar"
+	btn_c.custom_minimum_size = Vector2(0, 32)
+	btn_c.add_theme_font_size_override("font_size", 11)
+	var sc := StyleBoxFlat.new()
+	sc.bg_color     = Color(0.12, 0.06, 0.06)
+	sc.border_color = Color(0.55, 0.20, 0.20)
+	sc.set_border_width_all(1)
+	sc.set_corner_radius_all(6)
+	btn_c.add_theme_stylebox_override("normal", sc)
+	btn_c.pressed.connect(_cerrar_panel_contenedor)
+	vbox.add_child(btn_c)
+
+
+func _verificar_contenedor_cercano() -> bool:
+	var radio : float = 52.0
+	for nodo in _contenedores:
+		var c : Node2D = nodo as Node2D
+		if not is_instance_valid(c): continue
+		if jugador.global_position.distance_to(c.global_position) > radio: continue
+		_mostrar_panel_contenedor(c)
+		return true
+	return false
+
+
+func _mostrar_panel_contenedor(c: Node2D) -> void:
+	_contenedor_en_panel = c
+	var pct  : int    = c.porcentaje()
+	var lleno : bool  = c.esta_lleno()
+	var serv  : bool  = c.en_servicio
+
+	_pc_titulo_lbl.text = "🗑 Contenedor — %s" % c.nombre_bin
+
+	# Barra de llenado
+	var bar_w : float = 280.0
+	var col : Color
+	if pct >= 80:
+		col = Color(0.88, 0.12, 0.12)
+	elif pct >= 50:
+		col = Color(0.88, 0.72, 0.08)
+	else:
+		col = Color(0.28, 0.72, 0.22)
+	_pc_barra_fill.color  = col
+	_pc_barra_fill.size.x = bar_w * clampf(pct / 100.0, 0.0, 1.0)
+
+	# Texto de estado
+	if serv:
+		_pc_estado_lbl.text = "🧹 Limpiando... el servicio está en camino"
+		_pc_btn_servicio.text    = "En servicio..."
+		_pc_btn_servicio.disabled = true
+	else:
+		var estado_txt : String
+		if pct >= 90:
+			estado_txt = "⚠ URGENTE — %d%% lleno   (+20 XP si lo vacías ahora)" % pct
+		elif pct >= 70:
+			estado_txt = "Bastante lleno — %d%%   (+15 XP)" % pct
+		elif pct >= 50:
+			estado_txt = "Medio lleno — %d%%   (+10 XP)" % pct
+		else:
+			estado_txt = "Poco lleno — %d%%   (+5~7 XP)" % pct
+		_pc_estado_lbl.text       = estado_txt
+		_pc_btn_servicio.text     = "📞 Llamar servicio de limpieza"
+		_pc_btn_servicio.disabled = false
+
+	_panel_contenedor.modulate.a = 0.0
+	_panel_contenedor.visible    = true
+	var tw := create_tween()
+	tw.tween_property(_panel_contenedor, "modulate:a", 1.0, 0.18)
+
+
+func _cerrar_panel_contenedor() -> void:
+	if not is_instance_valid(_panel_contenedor): return
+	var tw := create_tween()
+	tw.tween_property(_panel_contenedor, "modulate:a", 0.0, 0.14)
+	tw.tween_callback(func(): _panel_contenedor.visible = false)
+	_contenedor_en_panel = null
+
+
+func _on_btn_servicio_contenedor() -> void:
+	if not is_instance_valid(_contenedor_en_panel): return
+	var c : Node2D = _contenedor_en_panel
+	if c.en_servicio: return
+	c.solicitar_servicio()
+	_sfx("zona")
+	_cerrar_panel_contenedor()
+	_mostrar_notificacion_zona("📞", "Servicio en camino a: %s" % c.nombre_bin,
+			Color(0.55, 0.85, 1.0))
+
+
+func _on_contenedor_vaciado(xp: int, c: Node2D) -> void:
+	_aplicar_xp(xp, "contenedor_%s" % c.nombre_bin.to_lower().replace(" ", "_"))
+	EconomiaManager.ganar_creditos(xp / 4)
+	# Contribuye al progreso M3 (Residuos)
+	var delta : float = 0.02 + float(xp) / 1000.0
+	var prev  : float = float(_progreso_modulos.get(3, 0.0))
+	_progreso_modulos[3] = clampf(prev + delta, 0.0, 1.0)
+	_actualizar_sidebar()
+	var msg : String
+	if xp >= 20:
+		msg = "🗑 ¡Contenedor vacío! Servicio excelente  +%d XP" % xp
+	else:
+		msg = "🗑 Contenedor vaciado  +%d XP" % xp
+	_mostrar_notificacion_zona("✓", msg, Color(0.30, 0.90, 0.42))
+	_sfx("xp_bonus" if xp >= 15 else "xp")
 
 
 func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:
