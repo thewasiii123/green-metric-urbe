@@ -35,12 +35,12 @@ func _crear_label() -> void:
 func _process(delta: float) -> void:
 	if en_servicio:
 		return
-	var prev := nivel_llenado
+	var prev : float = nivel_llenado
 	nivel_llenado = minf(nivel_llenado + TASA_LLENADO * delta, 1.0)
-	var tick := int(prev * 25) != int(nivel_llenado * 25)
+	var tick : bool = int(prev * 25) != int(nivel_llenado * 25)
 	if nivel_llenado >= 0.8:
 		_pulse_t += delta
-		var pulso := int(_pulse_t * 2.0) != int((_pulse_t - delta) * 2.0)
+		var pulso : bool = int(_pulse_t * 2.0) != int((_pulse_t - delta) * 2.0)
 		if tick or pulso:
 			queue_redraw()
 			_actualizar_label()
@@ -50,8 +50,8 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var hw := ANCHO * 0.5
-	var hh := ALTO  * 0.5
+	var hw : float = ANCHO * 0.5
+	var hh : float = ALTO  * 0.5
 
 	if en_servicio:
 		draw_rect(Rect2(-hw, -hh, ANCHO, ALTO), Color(0.12, 0.14, 0.18), true)
@@ -63,7 +63,7 @@ func _draw() -> void:
 
 	# Relleno (crece de abajo hacia arriba)
 	if nivel_llenado > 0.01:
-		var fill_h := ALTO * nivel_llenado
+		var fill_h : float = ALTO * nivel_llenado
 		draw_rect(Rect2(-hw, hh - fill_h, ANCHO, fill_h), _color_nivel(), true)
 
 	# Tapa
@@ -73,7 +73,7 @@ func _draw() -> void:
 	# Contorno — pulsa rojo cuando ≥80%
 	var borde : Color
 	if nivel_llenado >= 0.8:
-		var p := abs(sin(_pulse_t * PI * 2.0))
+		var p : float = absf(sin(_pulse_t * PI * 2.0))
 		borde = Color(0.88 + 0.12 * p, 0.10, 0.10)
 	elif nivel_llenado >= 0.5:
 		borde = Color(0.88, 0.70, 0.08)
@@ -101,8 +101,8 @@ func _actualizar_label() -> void:
 		_label.text = "🧹..."
 		_label.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0))
 		return
-	var pct   := int(nivel_llenado * 100)
-	var icono := "⚠" if nivel_llenado >= 0.8 else "🗑"
+	var pct   : int    = int(nivel_llenado * 100)
+	var icono : String = "⚠" if nivel_llenado >= 0.8 else "🗑"
 	_label.text = "%s%d%%" % [icono, pct]
 	_label.add_theme_color_override("font_color",
 			Color(1.0, 0.28, 0.28) if nivel_llenado >= 0.8 else Color(0.85, 0.85, 0.85))
@@ -126,7 +126,7 @@ func solicitar_servicio() -> void:
 
 
 func _servicio_completado() -> void:
-	var xp := _calcular_xp()
+	var xp : int = _calcular_xp()
 	nivel_llenado = 0.0
 	en_servicio   = false
 	_pulse_t      = 0.0
