@@ -24,6 +24,8 @@ func _ready() -> void:
 	add_to_group(GRUPO_JUGADOR)
 	if sprite:
 		sprite.play("idle_abajo")
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		sprite.scale = Vector2(1.5, 1.5)
 
 
 func _physics_process(delta: float) -> void:
@@ -85,6 +87,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _draw() -> void:
+	# Sombra elíptica bajo el personaje
+	draw_arc(Vector2(0, 10), 11.0, 0.0, PI, 14, Color(0, 0, 0, 0.22), 8.0)
+
 	if _trail.is_empty(): return
 	var n : int = _trail.size()
 	for i in n:

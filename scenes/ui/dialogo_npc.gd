@@ -9,8 +9,8 @@ extends CanvasLayer
 signal dialogo_terminado(mision_id: String)
 
 # — Nodos (creados en _crear_ui) ————————————————————————————
-var _retrato    : ColorRect = null
-var _nombre_lbl : Label     = null
+var _retrato_nodo : RetratoNPC = null
+var _nombre_lbl   : Label      = null
 var _texto_lbl  : Label     = null
 var _hint_lbl   : Label     = null
 
@@ -25,6 +25,69 @@ var _chars_vis      : int    = 0
 var _timer          : float  = 0.0
 var _escribiendo    : bool   = false
 const CHARS_SEG     : float  = 38.0
+
+
+# ════════════════════════════════════════════════════════════
+# INNER CLASS — Retrato animado del NPC (90 × 116 px)
+# Se dibuja proceduralmente con el color único de cada NPC.
+# ════════════════════════════════════════════════════════════
+class RetratoNPC extends Node2D:
+	var col : Color = Color(0.5, 0.5, 0.5)
+	var _t  : float = 0.0
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		var puls := 1.0 + 0.04 * sin(_t * 2.2)
+		var bob  := sin(_t * 1.5) * 1.5
+
+		# — Glow de fondo ─────────────────────────────────────
+		var ga := 0.09 + 0.05 * sin(_t * 1.8)
+		draw_circle(Vector2(45, 58), 50.0, Color(col.r, col.g, col.b, ga))
+
+		# — Cuerpo ────────────────────────────────────────────
+		var body_pts := PackedVector2Array([
+			Vector2(22, 90), Vector2(68, 90),
+			Vector2(72, 116), Vector2(18, 116)
+		])
+		draw_colored_polygon(body_pts, col.darkened(0.28))
+		for i in body_pts.size():
+			draw_line(body_pts[i], body_pts[(i + 1) % body_pts.size()],
+					  col.lightened(0.22), 1.5)
+		# Brillo en hombro
+		draw_arc(Vector2(22, 92), 6.0, PI, PI * 1.6, 8, col.lightened(0.55), 2.0)
+
+		# — Cuello ────────────────────────────────────────────
+		draw_rect(Rect2(40, 82, 10, 10), col.darkened(0.10))
+
+		# — Cabeza ────────────────────────────────────────────
+		var hp := Vector2(45, bob + 62)
+		draw_circle(hp, 22.0 * puls, col.lightened(0.08))
+		draw_arc(hp, 22.0 * puls, 0.0, TAU, 32, col.lightened(0.35), 2.0)
+
+		# — Ojos ──────────────────────────────────────────────
+		var el := hp + Vector2(-7.5, -3.0)
+		var er := hp + Vector2( 7.5, -3.0)
+		draw_circle(el, 4.5, Color(1.0, 1.0, 1.0, 0.93))
+		draw_circle(er, 4.5, Color(1.0, 1.0, 1.0, 0.93))
+		draw_circle(el + Vector2( 0.5,  0.5), 2.5, Color(0.08, 0.04, 0.18))
+		draw_circle(er + Vector2( 0.5,  0.5), 2.5, Color(0.08, 0.04, 0.18))
+		draw_circle(el + Vector2( 2.0, -1.5), 1.0, Color(1.0, 1.0, 1.0, 0.88))
+		draw_circle(er + Vector2( 2.0, -1.5), 1.0, Color(1.0, 1.0, 1.0, 0.88))
+
+		# — Boca (sonrisa) ────────────────────────────────────
+		draw_arc(hp + Vector2(0, 8.0), 7.5, 0.30, PI - 0.30, 10,
+				 col.lightened(0.60), 2.0)
+
+		# — Collar ────────────────────────────────────────────
+		draw_arc(hp + Vector2(0, 17.0), 9.0, 0.40, PI - 0.40, 10,
+				 col.lightened(0.45), 2.0)
+
+		# — Marco circular decorativo ─────────────────────────
+		draw_arc(Vector2(45, 58), 44.0, 0.0, TAU, 32,
+				 Color(col.r, col.g, col.b, 0.38), 1.5)
 
 
 func _ready() -> void:
@@ -51,6 +114,15 @@ func _crear_ui() -> void:
 	panel.add_theme_stylebox_override("panel", ps)
 	add_child(panel)
 
+	# Franja de acento verde en el borde superior del panel
+	var acento := ColorRect.new()
+	acento.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	acento.custom_minimum_size = Vector2(0, 3)
+	acento.offset_bottom       = 3.0
+	acento.color               = Color(0.22, 0.80, 0.28, 0.65)
+	acento.mouse_filter        = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(acento)
+
 	# ── Margen interior ──────────────────────────────────────
 	var mg := MarginContainer.new()
 	mg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -73,10 +145,13 @@ func _crear_ui() -> void:
 	col_izq.add_theme_constant_override("separation", 5)
 	hbox.add_child(col_izq)
 
-	_retrato = ColorRect.new()
-	_retrato.custom_minimum_size = Vector2(90, 116)
-	_retrato.color = Color(0.3, 0.3, 0.3)
-	col_izq.add_child(_retrato)
+	var retrato_cont := Control.new()
+	retrato_cont.custom_minimum_size = Vector2(90, 116)
+	retrato_cont.clip_contents       = true
+	col_izq.add_child(retrato_cont)
+
+	_retrato_nodo = RetratoNPC.new()
+	retrato_cont.add_child(_retrato_nodo)
 
 	_nombre_lbl = Label.new()
 	_nombre_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -120,10 +195,16 @@ func iniciar(nombre: String, textos: PackedStringArray,
 	_dialogos  = textos
 	_indice    = 0
 	_mision_id = mision_id
-	_retrato.color   = color
+	if _retrato_nodo:
+		_retrato_nodo.col = color
 	_nombre_lbl.text = nombre
 	_mostrar_linea()
 	show()
+	# Pista contextual: primera vez que se abre un diálogo
+	var hb = get_tree().get_first_node_in_group("hint_bubble")
+	if hb:
+		hb.push("primer_dialogo",
+			"📖 Lee el mensaje del NPC y presiona [E] para continuar.")
 
 
 # ── Internos ─────────────────────────────────────────────────

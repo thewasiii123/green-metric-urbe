@@ -1,51 +1,42 @@
 # ============================================================
 # tutorial_onboarding.gd — URBE Rangers: Eco-Quest
-# Tutorial interactivo de 7 pasos para la primera sesión.
-# Typewriter, puntos de progreso, tecla [E] para avanzar.
+# Intro de 4 pasos: explicación rápida del juego y GreenMetric.
+# Bloqueante (ui_tutorial). El resto se enseña con pistas
+# contextuales (hint_bubble.gd) cuando el jugador descubre algo.
 # ============================================================
 extends CanvasLayer
 
 signal tutorial_completado()
 
+# ── Contenido de los 4 pasos ────────────────────────────────
 const PASOS : Array = [
 	{
-		"emoji": "🌍",
+		"emoji":  "🌿",
 		"titulo": "¡Bienvenido a URBE Rangers: Eco-Quest!",
-		"texto": "Eres un estudiante de URBE comprometido con la sostenibilidad del campus. Tu misión: mejorar la posición de la universidad en el ranking internacional UI GreenMetric.",
+		"texto":  "Eres un Eco-Ranger del campus de la Universidad Rafael Belloso Chacín (URBE).\n\nTu misión: explorar el campus, hablar con los coordinadores de cada área y responder cuestionarios para mejorar la sostenibilidad universitaria.",
+		"color":  Color(0.22, 0.88, 0.28),
 	},
 	{
-		"emoji": "📊",
+		"emoji":  "📊",
 		"titulo": "¿Qué es UI GreenMetric?",
-		"texto": "UI GreenMetric evalúa universidades del mundo en 6 módulos de sostenibilidad: Entorno, Energía, Residuos, Agua, Transporte y Educación. URBE necesita tu ayuda para subir de posición.",
+		"texto":  "UI GreenMetric es el ranking mundial de sostenibilidad universitaria.\nEvalúa 6 módulos:\n\n  🌿 Entorno e Infraestructura\n  ⚡ Energía y Cambio Climático\n  ♻ Manejo de Residuos\n  💧 Uso del Agua\n  🚲 Transporte Sostenible\n  📚 Educación e Investigación",
+		"color":  Color(0.28, 0.88, 0.95),
 	},
 	{
-		"emoji": "🕹️",
-		"titulo": "Movimiento del Avatar",
-		"texto": "Usa las teclas WASD o las flechas del teclado para moverte por el campus.\n\n     W — Arriba\n A — Izquierda     D — Derecha\n     S — Abajo",
+		"emoji":  "🕹️",
+		"titulo": "¿Cómo jugar?",
+		"texto":  "Muévete con  W A S D  o las flechas del teclado.\n\nCuando veas un NPC con un nombre flotante encima, acércate y presiona  [E]  para interactuar.\n\nEn móvil: usa el joystick izquierdo y el botón  E  de la pantalla.",
+		"color":  Color(0.95, 0.80, 0.22),
 	},
 	{
-		"emoji": "👤",
-		"titulo": "Interacción con NPCs",
-		"texto": "Acércate a los personajes del campus (profesores, coordinadores, técnicos) y presiona [E] para interactuar. Cada NPC tiene misiones únicas relacionadas con un módulo GreenMetric.",
-	},
-	{
-		"emoji": "📍",
-		"titulo": "Zonas del Campus",
-		"texto": "Al entrar a un edificio o zona marcada, aparece un panel en la parte inferior. Presiona [E] para aceptar la misión de esa zona. Cada misión mejora un módulo específico.",
-	},
-	{
-		"emoji": "🏛️",
-		"titulo": "ImpactRating — Estado del Campus",
-		"texto": "Cada edificio muestra un indicador de color según el desempeño del módulo que representa:\n\n   🔴 Rojo = Estado crítico (< 40%%)\n   🟡 Amarillo = En riesgo (< 75%%)\n   🟢 Verde = Óptimo (≥ 75%%)\n\nTu objetivo es llevar todos los edificios a Verde.",
-	},
-	{
-		"emoji": "🏆",
-		"titulo": "¡Comienza tu Eco-Misión!",
-		"texto": "Dirígete al Rectorado (zona central) y habla con el Rector Morales para recibir tu primera misión oficial. Completa los 6 módulos para convertirte en EcoLíder de URBE.\n\nPresiona [E] o el botón para comenzar.",
+		"emoji":  "🏛️",
+		"titulo": "¡Tu primera misión!",
+		"texto":  "Dirígete al Rectorado (zona central del campus) y habla con el Rector Morales.\n\nÉl te explicará los detalles del ranking GreenMetric y te dará tu primera misión oficial.\n\n¡Buena suerte, Eco-Ranger! 🌍",
+		"color":  Color(0.88, 0.50, 0.22),
 	},
 ]
 
-const CHARS_SEG : float = 40.0
+const CHARS_SEG : float = 42.0
 
 var _paso_actual    : int    = 0
 var _texto_completo : String = ""
@@ -53,15 +44,15 @@ var _chars_vis      : int    = 0
 var _timer_tw       : float  = 0.0
 var _escribiendo    : bool   = false
 
-var _overlay        : ColorRect      = null
-var _panel          : Panel          = null
-var _emoji_lbl      : Label          = null
-var _titulo_lbl     : Label          = null
-var _texto_lbl      : Label          = null
-var _dots_row       : HBoxContainer  = null
-var _btn_siguiente  : Button         = null
-var _btn_saltar     : Button         = null
-var _hint_lbl       : Label          = null
+var _overlay       : ColorRect     = null
+var _panel         : Panel         = null
+var _emoji_lbl     : Label         = null
+var _titulo_lbl    : Label         = null
+var _texto_lbl     : Label         = null
+var _dots_row      : HBoxContainer = null
+var _btn_siguiente : Button        = null
+var _btn_saltar    : Button        = null
+var _acento        : ColorRect     = null
 
 
 func _ready() -> void:
@@ -78,17 +69,21 @@ func iniciar() -> void:
 
 
 func _mostrar_paso() -> void:
-	var p  : Dictionary = PASOS[_paso_actual]
+	var p : Dictionary = PASOS[_paso_actual]
 	_emoji_lbl.text  = p["emoji"]
 	_titulo_lbl.text = p["titulo"]
-	_texto_completo  = p["texto"]
-	_chars_vis       = 0
-	_timer_tw        = 0.0
-	_escribiendo     = true
-	_texto_lbl.text  = ""
+	_titulo_lbl.add_theme_color_override("font_color", p["color"])
+	_acento.color    = Color(p["color"].r, p["color"].g, p["color"].b, 0.55)
 
-	var es_ultimo : bool = (_paso_actual == PASOS.size() - 1)
-	_btn_siguiente.text = "  ¡Comenzar!  " if es_ultimo else "  Siguiente →  "
+	_texto_completo = p["texto"]
+	_chars_vis      = 0
+	_timer_tw       = 0.0
+	_escribiendo    = true
+	_texto_lbl.text = ""
+
+	var es_ultimo := (_paso_actual == PASOS.size() - 1)
+	_btn_siguiente.text = "  ¡Comenzar!  🚀" if es_ultimo else "  Siguiente  →  "
+	_btn_saltar.visible = not es_ultimo
 
 	_actualizar_dots()
 
@@ -139,53 +134,80 @@ func _finalizar() -> void:
 func _actualizar_dots() -> void:
 	var hijos := _dots_row.get_children()
 	for i in hijos.size():
-		var d : ColorRect = hijos[i]
-		d.color = Color(0.25, 0.90, 0.25) if i == _paso_actual else Color(0.18, 0.28, 0.40)
+		var d : Panel = hijos[i]
+		var s := StyleBoxFlat.new()
+		s.set_corner_radius_all(6)
+		s.set_border_width_all(2)
+		if i == _paso_actual:
+			s.bg_color     = PASOS[_paso_actual]["color"]
+			s.border_color = (PASOS[_paso_actual]["color"] as Color).lightened(0.30)
+		elif i < _paso_actual:
+			s.bg_color     = Color(0.22, 0.72, 0.22)
+			s.border_color = Color(0.30, 0.92, 0.30)
+		else:
+			s.bg_color     = Color(0.12, 0.18, 0.28)
+			s.border_color = Color(0.22, 0.32, 0.50)
+		d.add_theme_stylebox_override("panel", s)
+		# Pop en el dot activo
+		if i == _paso_actual:
+			var tw2 := d.create_tween().set_ease(Tween.EASE_OUT)
+			tw2.tween_property(d, "scale", Vector2(1.0, 1.0), 0.14).from(Vector2(1.5, 1.5))
 
 
 # ── Construcción UI ───────────────────────────────────────────
 func _crear_ui() -> void:
 	_overlay = ColorRect.new()
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_overlay.color = Color(0.0, 0.0, 0.0, 0.80)
+	_overlay.color = Color(0.0, 0.0, 0.0, 0.82)
 	add_child(_overlay)
 
 	_panel = Panel.new()
 	_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_panel.custom_minimum_size = Vector2(700, 440)
-	_panel.offset_left   = -350.0
-	_panel.offset_top    = -220.0
-	_panel.offset_right  =  350.0
-	_panel.offset_bottom =  220.0
+	_panel.custom_minimum_size = Vector2(720, 460)
+	_panel.offset_left   = -360.0
+	_panel.offset_top    = -230.0
+	_panel.offset_right  =  360.0
+	_panel.offset_bottom =  230.0
 	var ps := StyleBoxFlat.new()
-	ps.bg_color     = Color(0.04, 0.08, 0.13, 0.98)
+	ps.bg_color     = Color(0.04, 0.07, 0.12, 0.99)
 	ps.border_color = Color(0.22, 0.78, 0.22)
 	ps.set_border_width_all(3)
-	ps.set_corner_radius_all(18)
+	ps.set_corner_radius_all(20)
 	ps.shadow_color = Color(0.10, 0.60, 0.18, 0.50)
-	ps.shadow_size  = 28
+	ps.shadow_size  = 30
 	_panel.add_theme_stylebox_override("panel", ps)
 	add_child(_panel)
+
+	# Franja de color en la parte superior (cambia con cada paso)
+	_acento = ColorRect.new()
+	_acento.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_acento.custom_minimum_size = Vector2(0, 4)
+	_acento.offset_bottom       = 4.0
+	_acento.color               = Color(0.22, 0.78, 0.22, 0.55)
+	_acento.mouse_filter        = Control.MOUSE_FILTER_IGNORE
+	_panel.add_child(_acento)
 
 	var mg := MarginContainer.new()
 	mg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for m in ["margin_left","margin_right","margin_top","margin_bottom"]:
-		mg.add_theme_constant_override(m, 34)
+		mg.add_theme_constant_override(m, 36)
 	_panel.add_child(mg)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 10)
+	vbox.add_theme_constant_override("separation", 12)
 	mg.add_child(vbox)
 
+	# Emoji grande
 	_emoji_lbl = Label.new()
 	_emoji_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_emoji_lbl.add_theme_font_size_override("font_size", 44)
+	_emoji_lbl.add_theme_font_size_override("font_size", 48)
 	vbox.add_child(_emoji_lbl)
 
+	# Título del paso
 	_titulo_lbl = Label.new()
 	_titulo_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_titulo_lbl.autowrap_mode        = TextServer.AUTOWRAP_WORD
-	_titulo_lbl.add_theme_font_size_override("font_size", 19)
+	_titulo_lbl.add_theme_font_size_override("font_size", 20)
 	_titulo_lbl.add_theme_color_override("font_color", Color(0.28, 0.95, 0.28))
 	vbox.add_child(_titulo_lbl)
 
@@ -197,36 +219,44 @@ func _crear_ui() -> void:
 	sep.add_theme_stylebox_override("separator", sep_s)
 	vbox.add_child(sep)
 
+	# Texto con typewriter
 	_texto_lbl = Label.new()
 	_texto_lbl.autowrap_mode       = TextServer.AUTOWRAP_WORD
 	_texto_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_texto_lbl.vertical_alignment  = VERTICAL_ALIGNMENT_CENTER
+	_texto_lbl.vertical_alignment  = VERTICAL_ALIGNMENT_TOP
 	_texto_lbl.add_theme_font_size_override("font_size", 14)
-	_texto_lbl.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
+	_texto_lbl.add_theme_color_override("font_color", Color(0.85, 0.88, 0.85))
 	vbox.add_child(_texto_lbl)
 
+	# Dots de progreso (círculos)
 	_dots_row = HBoxContainer.new()
 	_dots_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_dots_row.add_theme_constant_override("separation", 10)
+	_dots_row.add_theme_constant_override("separation", 12)
 	for _i in PASOS.size():
-		var dot := ColorRect.new()
-		dot.custom_minimum_size = Vector2(10, 10)
-		dot.color = Color(0.18, 0.28, 0.40)
+		var dot := Panel.new()
+		dot.custom_minimum_size = Vector2(12, 12)
+		var ds := StyleBoxFlat.new()
+		ds.bg_color     = Color(0.12, 0.18, 0.28)
+		ds.border_color = Color(0.22, 0.32, 0.50)
+		ds.set_border_width_all(2)
+		ds.set_corner_radius_all(6)
+		dot.add_theme_stylebox_override("panel", ds)
 		_dots_row.add_child(dot)
 	vbox.add_child(_dots_row)
 
+	# Botones
 	var btn_row := HBoxContainer.new()
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	btn_row.add_theme_constant_override("separation", 20)
 	vbox.add_child(btn_row)
 
 	_btn_saltar = Button.new()
-	_btn_saltar.text = "Saltar tutorial"
+	_btn_saltar.text = "Saltar intro"
 	_btn_saltar.add_theme_font_size_override("font_size", 12)
-	_btn_saltar.add_theme_color_override("font_color", Color(0.50, 0.50, 0.50))
+	_btn_saltar.add_theme_color_override("font_color", Color(0.45, 0.45, 0.45))
 	var s_skip := StyleBoxFlat.new()
-	s_skip.bg_color     = Color(0.08, 0.10, 0.16)
-	s_skip.border_color = Color(0.22, 0.28, 0.42)
+	s_skip.bg_color     = Color(0.07, 0.09, 0.14)
+	s_skip.border_color = Color(0.20, 0.26, 0.40)
 	s_skip.set_border_width_all(1)
 	s_skip.set_corner_radius_all(8)
 	_btn_saltar.add_theme_stylebox_override("normal", s_skip)
@@ -234,8 +264,8 @@ func _crear_ui() -> void:
 	btn_row.add_child(_btn_saltar)
 
 	_btn_siguiente = Button.new()
-	_btn_siguiente.text = "  Siguiente →  "
-	_btn_siguiente.custom_minimum_size = Vector2(210, 46)
+	_btn_siguiente.text = "  Siguiente  →  "
+	_btn_siguiente.custom_minimum_size = Vector2(220, 48)
 	_btn_siguiente.add_theme_font_size_override("font_size", 15)
 	var s_next := StyleBoxFlat.new()
 	s_next.bg_color     = Color(0.06, 0.34, 0.08)
@@ -244,14 +274,14 @@ func _crear_ui() -> void:
 	s_next.set_corner_radius_all(12)
 	_btn_siguiente.add_theme_stylebox_override("normal", s_next)
 	var s_next_h := s_next.duplicate()
-	s_next_h.bg_color = Color(0.10, 0.48, 0.12)
+	(s_next_h as StyleBoxFlat).bg_color = Color(0.10, 0.48, 0.12)
 	_btn_siguiente.add_theme_stylebox_override("hover", s_next_h)
 	_btn_siguiente.pressed.connect(_on_siguiente)
 	btn_row.add_child(_btn_siguiente)
 
-	_hint_lbl = Label.new()
-	_hint_lbl.text = "[E] para avanzar"
-	_hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint_lbl.add_theme_font_size_override("font_size", 10)
-	_hint_lbl.add_theme_color_override("font_color", Color(0.35, 0.35, 0.35))
-	vbox.add_child(_hint_lbl)
+	var hint_lbl := Label.new()
+	hint_lbl.text = "[E] para avanzar"
+	hint_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint_lbl.add_theme_font_size_override("font_size", 10)
+	hint_lbl.add_theme_color_override("font_color", Color(0.32, 0.32, 0.32))
+	vbox.add_child(hint_lbl)

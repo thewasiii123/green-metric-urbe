@@ -23,6 +23,7 @@ SupabaseManager="*uid://1jsl8d8caah4"
 EconomiaManager="*res://autoload/EconomiaManager.gd"
 AudioManager="*res://autoload/AudioManager.gd"
 WindowManager="*res://autoload/WindowManager.gd"
+NivelManager="*res://autoload/NivelManager.gd"
 
 [display]
 

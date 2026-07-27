@@ -7,8 +7,8 @@ extends Node2D
 
 const MAPA_ANCHO : float = 1408.0
 const MAPA_ALTO  : float =  768.0
-const SPAWN_X    : float =  490.0
-const SPAWN_Y    : float =  762.0   # avenida principal — 10px al sur del tile de BloqueA
+const SPAWN_X    : float =  590.0
+const SPAWN_Y    : float =  360.0   # Patio Central — plaza abierta del campus
 
 const NPC_ESCENA                := preload("res://scenes/mapa/npc_base.tscn")
 const QUIZ_ESCENA               := preload("res://scenes/ui/quiz_npc.tscn")
@@ -24,6 +24,11 @@ const RESULTADOS_ESCENA         := preload("res://scenes/ui/resultados_greenmetr
 const ZONA_VERDE_ESCENA         := preload("res://scenes/mapa/zona_verde.gd")
 const CONTENEDOR_ESCENA         := preload("res://scenes/mapa/contenedor_basura.gd")
 const EDIFICIO_ESCENA           := preload("res://scenes/edificios/escena_edificio.gd")
+const ZONA_TIERRA_ESCENA        := preload("res://scenes/misiones/zona_tierra.gd")
+const PUNTO_ENERGIA_ESCENA      := preload("res://scenes/misiones/punto_critico_energia.gd")
+const MISION_PLANTAR_ESCENA     := preload("res://scenes/misiones/mision_plantar.gd")
+const INTERIOR_BLOQUE_ESCENA    := preload("res://scenes/misiones/interior_bloque.gd")
+const MISION_SOLAR_ESCENA       := preload("res://scenes/misiones/mision_solar.gd")
 
 # ── Sistema de niveles ───────────────────────────────────────
 const NIVELES : Array = [
@@ -374,6 +379,10 @@ var _leaderboard_ui   : CanvasLayer = null
 var _sim_decision_ui  : CanvasLayer = null
 var _resultados_ui    : CanvasLayer = null
 var _edificio_ui      : CanvasLayer = null
+# ── UIs de misiones por nivel ─────────────────────────────────
+var _plantar_ui       : CanvasLayer = null
+var _interior_ui      : CanvasLayer = null
+var _solar_ui         : CanvasLayer = null
 var _zonas_verdes        : Array       = []   # Array[Node2D]
 var _panel_zona_mejora   : Panel       = null
 var _pzm_titulo_lbl      : Label       = null
@@ -556,7 +565,7 @@ func _construir_hud() -> void:
 	_zona_hint_lbl.position = Vector2(48, 36)
 	_zona_hint_lbl.add_theme_font_size_override("font_size", 11)
 	_zona_hint_lbl.add_theme_color_override("font_color", Color(0.55, 0.90, 0.55))
-	_zona_hint_lbl.text = "[E] Comenzar misión"
+	_zona_hint_lbl.text = "🌿 N1 Plantar  ·  ⚡ N2 Energía"
 	_zona_panel.add_child(_zona_hint_lbl)
 
 	_celebracion_lbl = Label.new()
@@ -581,7 +590,9 @@ func _spawn_npcs() -> void:
 		npc.color      = datos["color"]
 		npc.position   = datos["pos"]
 		npc.z_index    = 1
-		npc.get_node("Visual").modulate = datos["color"]
+		var vis_node = npc.get_node_or_null("Visual")
+		if vis_node:
+			vis_node.modulate = datos["color"]
 		add_child(npc)
 	print("✅ %d NPCs instanciados" % DATOS_NPCS.size())
 
@@ -616,6 +627,11 @@ func _on_zona_activada(zona_key: String, modulo_id: int, nombre_modulo: String, 
 			col = info["color"]
 			break
 	_mostrar_notificacion_zona(icono_txt, nombre_modulo, col)
+	# Pista contextual: primera zona visitada
+	var hb = get_tree().get_first_node_in_group("hint_bubble")
+	if hb:
+		hb.push("primer_zona",
+			"📍 Presiona [E] para aceptar la misión de esta zona del campus.")
 
 func _on_zona_salida() -> void:
 	_zona_panel.visible = false
@@ -646,16 +662,21 @@ func _input(event: InputEvent) -> void:
 		_cerrar_panel_contenedor()
 		get_viewport().set_input_as_handled()
 		return
-	if _zona_activa != "":
-		# En zona: este nodo toma el evento para mostrar el interior del edificio.
-		# Evita que jugador.gd también dispare npc_cercano.iniciar_dialogo().
-		_mostrar_pantalla_mision()
-		get_viewport().set_input_as_handled()
-	else:
-		# Sin zona activa: no consumimos el evento; jugador._unhandled_input
-		# puede activar la interacción directa con el NPC si está cerca.
-		_verificar_contenedor_cercano()
-		_verificar_zona_verde_cercana()
+	# ── Nivel 1: zonas de plantación ────────────────────────────
+	for zt in get_tree().get_nodes_in_group("zona_tierra"):
+		if zt.get("_jugador_cerca") and not zt.get("_completada"):
+			zt.intentar_interactuar()
+			get_viewport().set_input_as_handled()
+			return
+	# ── Nivel 2: puntos críticos de energía ──────────────────────
+	for pe in get_tree().get_nodes_in_group("punto_energia"):
+		if pe.get("_jugador_cerca") and not pe.get("_completado"):
+			pe.intentar_interactuar()
+			get_viewport().set_input_as_handled()
+			return
+	# ── Sin misión de nivel: contenedores y zonas verdes ─────────
+	_verificar_contenedor_cercano()
+	_verificar_zona_verde_cercana()
 
 
 # ── Pantalla de misión — muestra interior del edificio primero ─
@@ -1237,10 +1258,16 @@ func _on_interaccion_iniciada() -> void:
 # ════════════════════════════════════════════════════════════
 # SISTEMAS EVA — Tutorial, Crisis, Economía, Leaderboard
 # ════════════════════════════════════════════════════════════
+const HINT_ESCENA := preload("res://scenes/ui/hint_bubble.gd")
+
 func _init_sistemas_eva() -> void:
 	# Controles táctiles (solo activos en móvil/touch)
 	var touch_ui := TOUCH_ESCENA.new()
 	add_child(touch_ui)
+
+	# Sistema de pistas contextuales (toast notifications)
+	var hint_ui := HINT_ESCENA.new()
+	add_child(hint_ui)
 
 	_tutorial_ui = TUTORIAL_ESCENA.new()
 	add_child(_tutorial_ui)
@@ -1268,6 +1295,9 @@ func _init_sistemas_eva() -> void:
 
 	# Contenedores de basura
 	_spawn_contenedores()
+
+	# Sistema de misiones por nivel (Nivel 1 y 2)
+	_init_misiones_nivel()
 
 	# EcoCredits label (esquina superior derecha)
 	_hud_creditos_lbl = Label.new()
@@ -1315,8 +1345,11 @@ func _init_sistemas_eva() -> void:
 
 	_actualizar_hud_economia()
 
-	# Tutorial en primera sesión (XP == 0)
-	if _xp_total == 0:
+	# Tutorial solo la primera vez que el usuario abre el juego
+	const _TUTORIAL_FLAG := "user://tutorial_visto.dat"
+	if not FileAccess.file_exists(_TUTORIAL_FLAG):
+		var _tf := FileAccess.open(_TUTORIAL_FLAG, FileAccess.WRITE)
+		if _tf: _tf.store_string("1"); _tf.close()
 		await get_tree().create_timer(0.6).timeout
 		_tutorial_ui.iniciar()
 
@@ -1736,3 +1769,174 @@ func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:
 	tw.tween_callback(func():
 		_insignia_lbl.visible = false
 		_insignia_lbl.scale   = Vector2(1, 1))
+
+
+# ════════════════════════════════════════════════════════════
+# SISTEMA DE MISIONES POR NIVEL — GreenMetric
+# Nivel 1: Infraestructura y Entorno  (plantación sostenible)
+# Nivel 2: Energía y Cambio Climático (LED + paneles solares)
+# ════════════════════════════════════════════════════════════
+
+const DATOS_ZONAS_TIERRA : Array = [
+	# Corredor Oeste — franja verde accesible entre Estacionamiento y BloqueD
+	{"id": "plantar_corredores", "nombre": "Corredor Principal", "indice": 0,
+	 "pos": Vector2(250, 390)},
+	# Zona Cultural — área verde al sur del Rectorado, totalmente accesible
+	{"id": "plantar_rectorado",  "nombre": "Jardín del Rectorado","indice": 1,
+	 "pos": Vector2(870, 680)},
+	# Patio Central — zona abierta central del campus
+	{"id": "plantar_patio",      "nombre": "Patio Central",        "indice": 2,
+	 "pos": Vector2(640, 300)},
+]
+
+const DATOS_PUNTOS_ENERGIA : Array = [
+	# Misiones LED (interior navegable)
+	{"id": "led_bloque_a", "nombre": "Bloque A", "tipo": "led",   "indice_bloque": 0,
+	 "pos": Vector2(415, 668)},
+	{"id": "led_bloque_b", "nombre": "Bloque B", "tipo": "led",   "indice_bloque": 1,
+	 "pos": Vector2(580, 568)},
+	{"id": "led_bloque_c", "nombre": "Bloque C", "tipo": "led",   "indice_bloque": 2,
+	 "pos": Vector2(390, 498)},
+	# Misiones de paneles solares
+	{"id": "solar_rectorado",       "nombre": "Rectorado",      "tipo": "solar", "indice_mision": 0,
+	 "pos": Vector2(950, 495)},
+	{"id": "solar_estacionamiento", "nombre": "Estacionamiento","tipo": "solar", "indice_mision": 1,
+	 "pos": Vector2(210, 618)},
+]
+
+
+func _nivel_mgr():
+	return get_node_or_null("/root/NivelManager")
+
+
+func _init_misiones_nivel() -> void:
+	# ── UIs de misiones ──────────────────────────────────────
+	_plantar_ui = MISION_PLANTAR_ESCENA.new()
+	add_child(_plantar_ui)
+	_plantar_ui.mision_completada_plantar.connect(_on_mision_plantar_completada)
+
+	_interior_ui = INTERIOR_BLOQUE_ESCENA.new()
+	add_child(_interior_ui)
+	_interior_ui.mision_interior_completada.connect(_on_interior_completado)
+
+	_solar_ui = MISION_SOLAR_ESCENA.new()
+	add_child(_solar_ui)
+	_solar_ui.mision_solar_completada.connect(_on_solar_completado)
+
+	# ── Spawns en mapa ───────────────────────────────────────
+	_spawn_zonas_tierra()
+	_spawn_puntos_energia()
+
+	# ── Señales de NivelManager ──────────────────────────────
+	var nm = _nivel_mgr()
+	if nm:
+		nm.nivel_completado.connect(_on_nivel_greenmetric_completado)
+
+
+func _spawn_zonas_tierra() -> void:
+	var nm = _nivel_mgr()
+	if not nm or not nm.nivel_desbloqueado(1):
+		return
+	for dato : Dictionary in DATOS_ZONAS_TIERRA:
+		var zt := ZONA_TIERRA_ESCENA.new()
+		zt.set("mision_id",     dato["id"])
+		zt.set("nombre_zona",   dato["nombre"])
+		zt.set("indice_mision", dato["indice"])
+		zt.position = dato["pos"]
+		zt.z_index  = 1
+		add_child(zt)
+		zt.plantar_solicitado.connect(_on_plantar_solicitado)
+
+
+func _spawn_puntos_energia() -> void:
+	var nm = _nivel_mgr()
+	if not nm or not nm.nivel_desbloqueado(2):
+		return
+	for dato : Dictionary in DATOS_PUNTOS_ENERGIA:
+		var pe := PUNTO_ENERGIA_ESCENA.new()
+		pe.set("mision_id",    dato["id"])
+		pe.set("nombre_punto", dato["nombre"])
+		pe.set("tipo",         dato["tipo"])
+		if dato.has("indice_bloque"):
+			pe.set("indice_bloque", dato["indice_bloque"])
+		if dato.has("indice_mision"):
+			pe.set("indice_mision", dato["indice_mision"])
+		pe.position = dato["pos"]
+		pe.z_index  = 1
+		add_child(pe)
+		pe.energia_solicitada.connect(_on_energia_solicitada)
+
+
+# ── Callbacks de interacción ──────────────────────────────────
+
+func _on_plantar_solicitado(zona: Area2D) -> void:
+	if not is_instance_valid(_plantar_ui): return
+	var indice : int = zona.get("indice_mision")
+	_plantar_ui.call("iniciar", indice, zona)
+
+
+func _on_energia_solicitada(punto: Area2D) -> void:
+	var tipo : String = punto.get("tipo")
+	if tipo == "led":
+		if not is_instance_valid(_interior_ui): return
+		var idx : int = punto.get("indice_bloque") if punto.get("indice_bloque") != null else 0
+		_interior_ui.call("iniciar", idx, punto)
+	elif tipo == "solar":
+		if not is_instance_valid(_solar_ui): return
+		var idx : int = punto.get("indice_mision") if punto.get("indice_mision") != null else 0
+		_solar_ui.call("iniciar", idx, punto)
+
+
+# ── Callbacks de misión completada ───────────────────────────
+
+func _on_mision_plantar_completada(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(1) if nm else 0.0
+	_progreso_modulos[1] = pct
+	_actualizar_sidebar()
+	SupabaseManager.guardar_progreso(1, xp, int(pct * 100), nm.nivel_completo(1) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("🌿 Plantación completada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
+func _on_interior_completado(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(2) if nm else 0.0
+	_progreso_modulos[2] = pct
+	_actualizar_sidebar()
+	SupabaseManager.guardar_progreso(2, xp, int(pct * 100), nm.nivel_completo(2) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("⚡ LED completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
+func _on_solar_completado(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(2) if nm else 0.0
+	_progreso_modulos[2] = pct
+	_actualizar_sidebar()
+	SupabaseManager.guardar_progreso(2, xp, int(pct * 100), nm.nivel_completo(2) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("☀️ Solar completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
+func _on_nivel_greenmetric_completado(nivel: int) -> void:
+	var nm = _nivel_mgr()
+	var nombre = nm.NOMBRES_NIVEL[nivel] if nm else "Nivel %d" % nivel
+	var icono  = nm.ICONOS_NIVEL[nivel]  if nm else "⭐"
+	_mostrar_celebracion("%s NIVEL %d\n¡COMPLETADO!\n%s" % [icono, nivel, nombre])
+	_sfx("nivel")
+	var bonus_ec : int = int(nm.XP_NIVEL_BONUS.get(nivel, 150)) / 5 if nm else 30
+	EconomiaManager.ganar_creditos(bonus_ec)
+	var sig_nivel := nivel + 1
+	if sig_nivel == 2 and nm and nm.nivel_desbloqueado(2):
+		_spawn_puntos_energia()
+	print("%s Nivel GreenMetric %d completado! Desbloqueando nivel %d…" % [icono, nivel, sig_nivel])

@@ -25,6 +25,8 @@ var _dots_row     : HBoxContainer  = null
 var _dots         : Array          = []
 var _flash        : ColorRect      = null
 var _panel        : Panel          = null
+var _btn_salir    : Button         = null
+var _dlg_overlay  : ColorRect      = null
 
 # — Estado ────────────────────────────────────────────────
 var _preguntas         : Array = []
@@ -141,6 +143,24 @@ func _crear_ui() -> void:
 	_timer_lbl.add_theme_color_override("font_color", Color(0.78, 0.78, 0.78))
 	header.add_child(_timer_lbl)
 
+	# Botón Salir
+	_btn_salir = Button.new()
+	_btn_salir.text = "✕ Salir"
+	_btn_salir.custom_minimum_size = Vector2(80, 28)
+	_btn_salir.add_theme_font_size_override("font_size", 12)
+	var s_sal := StyleBoxFlat.new()
+	s_sal.bg_color     = Color(0.18, 0.06, 0.06)
+	s_sal.border_color = Color(0.65, 0.18, 0.18)
+	s_sal.set_border_width_all(1)
+	s_sal.set_corner_radius_all(6)
+	_btn_salir.add_theme_stylebox_override("normal", s_sal)
+	var s_sal_h := s_sal.duplicate()
+	(s_sal_h as StyleBoxFlat).bg_color = Color(0.30, 0.08, 0.08)
+	_btn_salir.add_theme_stylebox_override("hover", s_sal_h)
+	_btn_salir.add_theme_color_override("font_color", Color(0.90, 0.36, 0.36))
+	_btn_salir.pressed.connect(_on_btn_salir_pressed)
+	header.add_child(_btn_salir)
+
 	# ── Puntos de progreso ───────────────────────────────
 	_dots_row = HBoxContainer.new()
 	_dots_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -210,6 +230,112 @@ func _crear_ui() -> void:
 	hint.add_theme_color_override("font_color", Color(0.40, 0.40, 0.40))
 	pie.add_child(hint)
 
+	# ── Diálogo de confirmación de salida (oculto por defecto) ─
+	_crear_dialogo_salida()
+
+
+func _crear_dialogo_salida() -> void:
+	_dlg_overlay = ColorRect.new()
+	_dlg_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_dlg_overlay.color = Color(0.0, 0.0, 0.0, 0.70)
+	_dlg_overlay.visible = false
+	_dlg_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_dlg_overlay)
+
+	var dlg := Panel.new()
+	dlg.set_anchors_preset(Control.PRESET_CENTER)
+	dlg.custom_minimum_size = Vector2(380, 180)
+	dlg.offset_left   = -190.0
+	dlg.offset_top    = -90.0
+	dlg.offset_right  =  190.0
+	dlg.offset_bottom =  90.0
+	var ds := StyleBoxFlat.new()
+	ds.bg_color     = Color(0.08, 0.06, 0.06, 0.98)
+	ds.border_color = Color(0.75, 0.22, 0.22)
+	ds.set_border_width_all(2)
+	ds.set_corner_radius_all(14)
+	ds.shadow_color = Color(0.6, 0.1, 0.1, 0.40)
+	ds.shadow_size  = 18
+	dlg.add_theme_stylebox_override("panel", ds)
+	_dlg_overlay.add_child(dlg)
+
+	var vmg := MarginContainer.new()
+	vmg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for m in ["margin_left","margin_right","margin_top","margin_bottom"]:
+		vmg.add_theme_constant_override(m, 24)
+	dlg.add_child(vmg)
+
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 14)
+	vb.alignment = BoxContainer.ALIGNMENT_CENTER
+	vmg.add_child(vb)
+
+	var ico := Label.new()
+	ico.text = "⚠️"
+	ico.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ico.add_theme_font_size_override("font_size", 28)
+	vb.add_child(ico)
+
+	var msg := Label.new()
+	msg.text = "¿Salir del quiz?\nNo se guardará el XP de esta sesión."
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg.autowrap_mode = TextServer.AUTOWRAP_WORD
+	msg.add_theme_font_size_override("font_size", 14)
+	msg.add_theme_color_override("font_color", Color(0.88, 0.88, 0.88))
+	vb.add_child(msg)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_row.add_theme_constant_override("separation", 18)
+	vb.add_child(btn_row)
+
+	var btn_si := Button.new()
+	btn_si.text = "Sí, salir"
+	btn_si.custom_minimum_size = Vector2(120, 38)
+	btn_si.add_theme_font_size_override("font_size", 13)
+	var ss := StyleBoxFlat.new()
+	ss.bg_color     = Color(0.28, 0.06, 0.06)
+	ss.border_color = Color(0.80, 0.22, 0.22)
+	ss.set_border_width_all(2)
+	ss.set_corner_radius_all(10)
+	btn_si.add_theme_stylebox_override("normal", ss)
+	btn_si.add_theme_color_override("font_color", Color(1.0, 0.55, 0.55))
+	btn_si.pressed.connect(_on_confirmar_salida)
+	btn_row.add_child(btn_si)
+
+	var btn_no := Button.new()
+	btn_no.text = "No, continuar"
+	btn_no.custom_minimum_size = Vector2(140, 38)
+	btn_no.add_theme_font_size_override("font_size", 13)
+	var sn := StyleBoxFlat.new()
+	sn.bg_color     = Color(0.06, 0.22, 0.08)
+	sn.border_color = Color(0.22, 0.78, 0.25)
+	sn.set_border_width_all(2)
+	sn.set_corner_radius_all(10)
+	btn_no.add_theme_stylebox_override("normal", sn)
+	btn_no.add_theme_color_override("font_color", Color(0.40, 1.0, 0.48))
+	btn_no.pressed.connect(_on_cancelar_salida)
+	btn_row.add_child(btn_no)
+
+
+func _on_btn_salir_pressed() -> void:
+	_cronometro_activo = false
+	_dlg_overlay.visible = true
+
+
+func _on_confirmar_salida() -> void:
+	_dlg_overlay.visible = false
+	_cronometro_activo   = false
+	var tw := create_tween()
+	tw.tween_property(_panel, "modulate:a", 0.0, 0.18)
+	tw.tween_callback(func(): hide())
+
+
+func _on_cancelar_salida() -> void:
+	_dlg_overlay.visible = false
+	if not _bloqueado:
+		_cronometro_activo = true
+
 
 # ════════════════════════════════════════════════════════
 # API PÚBLICA
@@ -223,12 +349,18 @@ func iniciar(preguntas: Array, nombre_npc: String) -> void:
 	_titulo_lbl.text = "QUIZ  ─  " + nombre_npc
 	_xp_lbl.text     = "XP ganada: 0"
 	_racha_lbl.visible = false
+	_dlg_overlay.visible = false
 	_crear_dots()
 	_mostrar_pregunta()
 	_panel.modulate.a = 0.0
 	show()
 	var tw := create_tween()
 	tw.tween_property(_panel, "modulate:a", 1.0, 0.20)
+	# Pista contextual (solo la primera vez)
+	var hb = get_tree().get_first_node_in_group("hint_bubble")
+	if hb:
+		hb.push("primer_quiz",
+			"⏱ Tienes 15 seg por pregunta. ¡Responde rápido para ganar XP extra!")
 
 
 # ════════════════════════════════════════════════════════
@@ -238,9 +370,14 @@ func _crear_dots() -> void:
 	for d in _dots_row.get_children(): d.queue_free()
 	_dots.clear()
 	for _i in _preguntas.size():
-		var dot := ColorRect.new()
-		dot.custom_minimum_size = Vector2(12, 12)
-		dot.color = Color(0.22, 0.32, 0.45)
+		var dot := Panel.new()
+		dot.custom_minimum_size = Vector2(14, 14)
+		var s := StyleBoxFlat.new()
+		s.bg_color     = Color(0.22, 0.32, 0.45)
+		s.border_color = Color(0.35, 0.50, 0.70)
+		s.set_border_width_all(2)
+		s.set_corner_radius_all(7)
+		dot.add_theme_stylebox_override("panel", s)
 		_dots_row.add_child(dot)
 		_dots.append(dot)
 
@@ -258,7 +395,9 @@ func _mostrar_pregunta() -> void:
 	var ops : Array = q["opciones"]
 	for i in range(_botones.size()):
 		var btn : Button = _botones[i]
-		btn.text     = ops[i] if i < ops.size() else ""
+		# El texto debe estar prefijado ANTES de llamar _btn_normal
+		# para que su substr(3) recorte el prefijo y no el contenido.
+		btn.text     = letras[i] + "  " + (ops[i] if i < ops.size() else "")
 		btn.disabled = false
 		_btn_normal(btn, letras[i])
 
@@ -363,6 +502,10 @@ func _tiempo_se_acabo() -> void:
 
 
 func _finalizar() -> void:
+	var hb = get_tree().get_first_node_in_group("hint_bubble")
+	if hb:
+		hb.push("primer_quiz_done",
+			"🏆 ¡Quiz completado! Busca más NPCs en el campus para seguir explorando.")
 	var tw := create_tween()
 	tw.tween_property(_panel, "modulate:a", 0.0, 0.18)
 	tw.tween_callback(func():
@@ -390,15 +533,31 @@ func _actualizar_timer() -> void:
 
 func _actualizar_dots(idx_respondido: int) -> void:
 	for i in _dots.size():
-		var dot : ColorRect = _dots[i]
+		var dot  : Panel = _dots[i]
+		var bg   : Color
+		var brd  : Color
 		if i < _indice:
-			dot.color = Color(0.22, 0.72, 0.22)
+			bg  = Color(0.22, 0.72, 0.22)
+			brd = Color(0.30, 0.92, 0.30)
+		elif i == _indice and idx_respondido == -2:
+			bg  = Color(0.80, 0.20, 0.20)
+			brd = Color(1.00, 0.35, 0.35)
 		elif i == _indice:
-			dot.color = Color(0.80, 0.80, 0.80)
+			bg  = Color(0.82, 0.82, 0.82)
+			brd = Color(1.00, 1.00, 1.00)
 		else:
-			dot.color = Color(0.22, 0.32, 0.45)
-		if i == _indice and idx_respondido == -2:
-			dot.color = Color(0.80, 0.20, 0.20)
+			bg  = Color(0.22, 0.32, 0.45)
+			brd = Color(0.35, 0.50, 0.70)
+		var s := StyleBoxFlat.new()
+		s.bg_color     = bg
+		s.border_color = brd
+		s.set_border_width_all(2)
+		s.set_corner_radius_all(7)
+		dot.add_theme_stylebox_override("panel", s)
+		# "Pop" visual en el dot activo
+		if i == _indice:
+			var tw := dot.create_tween().set_ease(Tween.EASE_OUT)
+			tw.tween_property(dot, "scale", Vector2(1.0, 1.0), 0.12).from(Vector2(1.4, 1.4))
 
 
 func _disparar_flash(color: Color) -> void:
