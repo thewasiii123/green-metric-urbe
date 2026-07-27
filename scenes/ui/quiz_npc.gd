@@ -452,7 +452,7 @@ func _btn_normal(btn: Button, letra: String) -> void:
 	btn.add_theme_color_override("font_color", Color(0.85, 0.85, 0.90))
 
 
-func _btn_hover(btn: Button, letra: String) -> void:
+func _btn_hover(btn: Button, _letra: String) -> void:
 	var s := StyleBoxFlat.new()
 	s.bg_color     = Color(0.14, 0.22, 0.38)
 	s.border_color = Color(0.35, 0.55, 0.90)

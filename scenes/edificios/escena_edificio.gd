@@ -57,16 +57,25 @@ func mostrar(zona_key: String, info: Dictionary, nombre_npc: String) -> void:
 	_desc       = _obtener_desc(zona_key)
 	_col        = MOD_COLORES[clamp(_mod_id, 1, 6)]
 	_actualizar_visual()
-	visible    = true
-	modulate.a = 0.0
-	var tw := create_tween()
-	tw.tween_property(self, "modulate:a", 1.0, 0.30)
+	visible = true
+	# CanvasLayer no tiene modulate; se anima el Panel raíz (_raiz) que sí
+	# es CanvasItem y hereda la propiedad modulate.
+	if is_instance_valid(_raiz):
+		_raiz.modulate.a = 0.0
+		var tw := create_tween()
+		tw.tween_property(_raiz, "modulate:a", 1.0, 0.30)
 
 
 func ocultar() -> void:
-	var tw := create_tween()
-	tw.tween_property(self, "modulate:a", 0.0, 0.22)
-	tw.tween_callback(func(): visible = false)
+	if is_instance_valid(_raiz):
+		var tw := create_tween()
+		tw.tween_property(_raiz, "modulate:a", 0.0, 0.22)
+		tw.tween_callback(func():
+			visible = false
+			_raiz.modulate.a = 1.0
+		)
+	else:
+		visible = false
 
 
 func marcar_mision_activa() -> void:
