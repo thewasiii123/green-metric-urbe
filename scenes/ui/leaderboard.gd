@@ -17,7 +17,6 @@ var _overlay     : ColorRect    = null
 var _panel       : Panel        = null
 var _rows_vbox   : VBoxContainer = null
 var _estado_lbl  : Label        = null
-var _jugador_lbl : Label        = null
 var _http        : HTTPRequest   = null
 var _cargando    : bool         = false
 

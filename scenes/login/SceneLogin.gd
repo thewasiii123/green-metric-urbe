@@ -40,9 +40,6 @@ var _spinner_chars  : Array = ["◐","◓","◑","◒"]
 var _spinner_idx    : int   = 0
 var _spinner_timer  : float = 0.0
 
-# ── Animación logo ────────────────────────────────────────────
-var _logo_node  : Node2D = null
-var _logo_time  : float  = 0.0
 
 
 # ════════════════════════════════════════════════════════════

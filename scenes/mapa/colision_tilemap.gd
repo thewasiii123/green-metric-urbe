@@ -9,28 +9,40 @@ const TS : int = 16
 
 # Posiciones exactas extraídas de los Rect2 en mapa_campus.gd
 # [cx, cy, w, h]  (centro = pos + size/2)
+# Layout real URBE — basado en foto aérea del campus
 const EDIFICIOS : Array = [
-	# Lago norte  y=0..163
-	[704,   80,  1408,  163],
+	# Lago norte y=0..80
+	[704,  40, 1408,  80],
 
-	# Fila 1  y=208..368  (BloqueE desplazado 16px → pasillo 32px con Biblioteca)
-	[ 96,  288,   192,  160],   # Estacionamiento M5
-	[328,  288,   176,  160],   # Cafetín
-	[568,  288,   208,  160],   # Biblioteca
-	[776,  288,   144,  160],   # Bloque E  (x=704..848)
-	[1280, 392,   256,  368],   # Bloque F  (filas 1 y 2)
+	# Estacionamiento M5  x=0..220, y=120..540
+	[110, 330,  220, 420],
 
-	# Fila 2  y=400..576  (BloqueB desplazado 16px → pasillo 32px con BloqueA)
-	[ 96,  488,   192,  176],   # Bloque G
-	[328,  488,   176,  176],   # Bloque D
-	[552,  488,   176,  176],   # Bloque A
-	[752,  488,   160,  176],   # Bloque B  (x=672..832)
+	# Cafetín M3  x=280..480, y=120..280
+	[380, 200,  200, 160],
 
-	# Fila 3  y=608..704
-	[ 72,  656,   144,   96],   # Fotocopiado
-	[320,  656,   160,   96],   # Bloque C
-	[672,  656,   416,   96],   # Rectorado / Auditorio
-	[1280, 656,   256,   96],   # Área de Servicios
+	# Bloque E M2  x=700..1080, y=120..420
+	[890, 270,  380, 300],
+
+	# Estudios a Distancia M1  x=1120..1408, y=120..660
+	[1264, 390,  288, 540],
+
+	# Bloque D M2  x=280..480, y=320..480
+	[380, 400,  200, 160],
+
+	# Bloque C M2  x=280..460, y=520..640
+	[370, 580,  180, 120],
+
+	# Bloque B M2  x=520..700, y=520..640
+	[610, 580,  180, 120],
+
+	# Rectorado M6  x=740..1060, y=480..660
+	[900, 570,  320, 180],
+
+	# Fotocopiado M1  x=0..180, y=580..700
+	[ 90, 640,  180, 120],
+
+	# Bloque A M2  x=280..700, y=680..740
+	[490, 710,  420,  60],
 ]
 
 var _source_id : int = 0

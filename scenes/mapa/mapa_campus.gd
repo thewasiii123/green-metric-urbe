@@ -46,24 +46,19 @@ var impacto : Dictionary = {
 
 var mostrar_calor : bool = false
 
-# Edificios con su módulo GreenMetric asociado
+# Edificios con su módulo GreenMetric asociado — layout real URBE
 const EDIFICIOS_CALOR : Array = [
-	# Fila 1  y=208..368
-	{"rect": Rect2(  0, 208, 192, 160), "mod": 5, "nombre": "Estac."},
-	{"rect": Rect2(240, 208, 176, 160), "mod": 3, "nombre": "Cafetín"},
-	{"rect": Rect2(464, 208, 208, 160), "mod": 4, "nombre": "Bibliot."},
-	{"rect": Rect2(704, 208, 144, 160), "mod": 2, "nombre": "Bloque E"},
-	{"rect": Rect2(1152,208, 256, 368), "mod": 1, "nombre": "Bloque F"},
-	# Fila 2  y=400..576
-	{"rect": Rect2(  0, 400, 192, 176), "mod": 1, "nombre": "Bloque G"},
-	{"rect": Rect2(240, 400, 176, 176), "mod": 2, "nombre": "Bloque D"},
-	{"rect": Rect2(464, 400, 176, 176), "mod": 2, "nombre": "Bloque A"},
-	{"rect": Rect2(672, 400, 160, 176), "mod": 2, "nombre": "Bloque B"},
-	# Fila 3  y=608..704
-	{"rect": Rect2(  0, 608, 144,  96), "mod": 1, "nombre": "Fotocop."},
-	{"rect": Rect2(240, 608, 160,  96), "mod": 2, "nombre": "Bloque C"},
-	{"rect": Rect2(464, 608, 416,  96), "mod": 6, "nombre": "Rectorado"},
-	{"rect": Rect2(1152,608, 256,  96), "mod": 6, "nombre": "Área Serv."},
+	{"rect": Rect2(   0, 120, 220, 420), "mod": 5, "nombre": "Estac. M5"},
+	{"rect": Rect2( 280, 120, 200, 160), "mod": 3, "nombre": "Cafetín"},
+	{"rect": Rect2( 700, 120, 380, 300), "mod": 2, "nombre": "Bloque E"},
+	{"rect": Rect2(1120, 120, 288, 540), "mod": 1, "nombre": "Est. Dist."},
+	{"rect": Rect2( 280, 320, 200, 160), "mod": 2, "nombre": "Bloque D"},
+	{"rect": Rect2( 480, 120, 220, 360), "mod": 4, "nombre": "Patio"},
+	{"rect": Rect2( 280, 520, 180, 120), "mod": 2, "nombre": "Bloque C"},
+	{"rect": Rect2( 520, 520, 180, 120), "mod": 2, "nombre": "Bloque B"},
+	{"rect": Rect2( 740, 480, 320, 180), "mod": 6, "nombre": "Rectorado"},
+	{"rect": Rect2(   0, 580, 180, 120), "mod": 1, "nombre": "Fotocop."},
+	{"rect": Rect2( 280, 680, 420,  60), "mod": 2, "nombre": "Bloque A"},
 ]
 
 func toggle_mapa_calor() -> void:
@@ -134,9 +129,9 @@ func _draw() -> void:
 	var C_CESPED2  := Color(0.18, 0.42, 0.18)
 	var C_LAGO     := Color(0.08, 0.42, 0.78)
 	var C_ORILLA   := Color(0.55, 0.45, 0.25)
-	var C_CAMINO   := Color(0.80, 0.66, 0.40)
-	var C_CAMINO2  := Color(0.64, 0.50, 0.26)
-	var C_PLAZA    := Color(0.28, 0.56, 0.28)
+	var C_CAMINO   := Color(0.78, 0.65, 0.42)
+	var C_CAMINO2  := Color(0.60, 0.48, 0.28)
+	var C_PATIO    := Color(0.26, 0.54, 0.26)
 	var C_EDIF     := Color(0.52, 0.38, 0.28)
 	var C_EDIF_VIP := Color(0.36, 0.22, 0.12)
 	var C_TECHO    := Color(0.28, 0.14, 0.06)
@@ -152,146 +147,157 @@ func _draw() -> void:
 	for gy in range(0, 768, 32):
 		draw_rect(Rect2(0, gy, 1408, 16), C_CESPED2)
 
-	# ── LAGO NORTE  y=0..160 ─────────────────────────────────
-	draw_rect(Rect2(0, 0, 1408, 160), C_LAGO)
-	for ox in range(0, 1408, 140):
-		draw_arc(Vector2(ox + 70, 110), 36, 0.0, PI, 20, Color(1,1,1,0.10), 2.5)
-	draw_rect(Rect2(0, 155, 1408, 8), C_ORILLA)
-	draw_circle(Vector2(250,  80), 8, Color(0.90, 0.85, 0.60))
-	draw_circle(Vector2(900,  70), 8, Color(0.90, 0.85, 0.60))
-	draw_circle(Vector2(1200, 90), 8, Color(0.90, 0.85, 0.60))
+	# ── LAGO NORTE  y=0..80 ──────────────────────────────────
+	draw_rect(Rect2(0, 0, 1408, 80), C_LAGO)
+	for ox in range(0, 1408, 110):
+		draw_arc(Vector2(float(ox) + 55.0, 55.0), 24.0, 0.0, PI, 16, Color(1,1,1,0.10), 2.0)
+	draw_rect(Rect2(0, 76, 1408, 6), C_ORILLA)
+	draw_circle(Vector2(200, 42), 7, Color(0.90, 0.85, 0.60))
+	draw_circle(Vector2(700, 38), 7, Color(0.90, 0.85, 0.60))
+	draw_circle(Vector2(1250, 48), 7, Color(0.90, 0.85, 0.60))
 	_draw_str(font, "Lago URBE / Área Deportiva Norte",
-			  Vector2(704, 88), Color(1,1,1,0.55), 9)
+			  Vector2(704, 50), Color(1,1,1,0.55), 9)
 
-	# ── CAMINO SUPERIOR HORIZONTAL  y=176..208 (32px) ────────
-	draw_rect(Rect2(0, 176, 1408, 32), C_CAMINO)
-	draw_rect(Rect2(0, 176, 1408,  2), C_CAMINO2)
-	draw_rect(Rect2(0, 206, 1408,  2), C_CAMINO2)
+	# ── CAMINO NORTE HORIZONTAL  y=82..120 ───────────────────
+	draw_rect(Rect2(0, 82, 1408, 38), C_CAMINO)
+	draw_rect(Rect2(0, 82,  1408, 2), C_CAMINO2)
+	draw_rect(Rect2(0, 118, 1408, 2), C_CAMINO2)
 
-	# ── CAMINO VERTICAL IZQUIERDO  x=192..240 (48px) ─────────
-	draw_rect(Rect2(192, 208, 48, 496), C_CAMINO)
-	draw_rect(Rect2(192, 208,  2, 496), C_CAMINO2)
-	draw_rect(Rect2(238, 208,  2, 496), C_CAMINO2)
+	# ── CORREDOR OESTE  x=220..280, y=82..740 ─────────────────
+	draw_rect(Rect2(220, 82, 60, 658), C_CAMINO)
+	draw_rect(Rect2(220, 82,  2, 658), C_CAMINO2)
+	draw_rect(Rect2(278, 82,  2, 658), C_CAMINO2)
 
-	# ── CAMINO VERTICAL CENTRO-IZQ  x=416..464 (48px) ────────
-	draw_rect(Rect2(416, 208, 48, 496), C_CAMINO)
-	draw_rect(Rect2(416, 208,  2, 496), C_CAMINO2)
-	draw_rect(Rect2(462, 208,  2, 496), C_CAMINO2)
+	# ── PATIO CENTRAL  x=480..700, y=82..520 ─────────────────
+	draw_rect(Rect2(480, 82, 220, 438), C_PATIO)
+	for gy in range(82, 520, 24):
+		draw_rect(Rect2(480, gy, 220, 12), C_CESPED2)
+	# Fuente del patio
+	var FC := Vector2(590.0, 290.0)
+	draw_circle(FC, 30, Color(0.06, 0.28, 0.62))
+	draw_arc(FC, 30, 0.0, TAU, 28, Color(0.30, 0.70, 0.95), 2.5)
+	draw_circle(FC, 18, Color(0.12, 0.45, 0.82))
+	draw_arc(FC, 5, 0.0, TAU, 10, Color(0.70, 0.92, 1.0), 1.5)
+	_draw_str(font, "Patio Central", FC + Vector2(0.0, 42.0), Color(1,1,1,0.72), 8)
+	# Árboles del patio
+	for ap in [Vector2(498, 130), Vector2(680, 130), Vector2(498, 450),
+			   Vector2(680, 450), Vector2(498, 290), Vector2(680, 290)]:
+		draw_circle(ap, 12, Color(0.14, 0.38, 0.14))
+		draw_circle(ap - Vector2(3,3), 5, Color(0.22, 0.54, 0.18))
 
-	# ── CAMINO VERTICAL DERECHO  x=1104..1152 (48px) ─────────
-	draw_rect(Rect2(1104, 208, 48, 496), C_CAMINO)
-	draw_rect(Rect2(1104, 208,  2, 496), C_CAMINO2)
-	draw_rect(Rect2(1150, 208,  2, 496), C_CAMINO2)
+	# ── CORREDOR BloqueE–EstDistancia  x=1080..1120 ──────────
+	draw_rect(Rect2(1080, 82, 40, 658), C_CAMINO)
+	draw_rect(Rect2(1080, 82,  2, 658), C_CAMINO2)
+	draw_rect(Rect2(1118, 82,  2, 658), C_CAMINO2)
 
-	# ── PASILLOS HORIZONTALES ENTRE FILAS (32px cada uno) ────
-	draw_rect(Rect2(0, 368, 1152, 32), C_CAMINO)    # fila 1 → fila 2  (y=368..400)
-	draw_rect(Rect2(0, 576, 1152, 32), C_CAMINO)    # fila 2 → fila 3  (y=576..608)
+	# ── PASILLO BloqueE↔Rectorado  y=420..480 ────────────────
+	draw_rect(Rect2(700, 420, 380, 60), C_CAMINO)
+	draw_rect(Rect2(700, 420, 380,  2), C_CAMINO2)
+	draw_rect(Rect2(700, 478, 380,  2), C_CAMINO2)
 
-	# ── AVENIDA PRINCIPAL  y=704..768 ────────────────────────
-	draw_rect(Rect2(0, 704, 1408, 64), C_CAMINO)
-	draw_rect(Rect2(0, 704, 1408,  3), C_CAMINO2)
+	# ── PASILLOS HORIZONTALES INTERNOS ───────────────────────
+	# Cafetín ↔ Bloque D  (y=280..320)
+	draw_rect(Rect2(280, 280, 200, 40), C_CAMINO)
+	# Bloque D ↔ Bloque C  (y=480..520)
+	draw_rect(Rect2(280, 480, 220, 40), C_CAMINO)
+	draw_rect(Rect2(500, 480, 200, 40), C_PATIO)   # patio se conecta aquí
+	# Pasillo C ↔ B  (x=460..520, y=520..640)
+	draw_rect(Rect2(460, 520, 60, 120), C_CAMINO)
+	# Pasillo B ↔ Rectorado  (x=700..740, y=480..680)
+	draw_rect(Rect2(700, 480, 40, 200), C_CAMINO)
+	# C/B ↔ Bloque A  (y=640..680)
+	draw_rect(Rect2(280, 640, 420, 40), C_CAMINO)
+	# Este del Rectorado y EstDistancia ↔ Avenida (y=660..740)
+	draw_rect(Rect2(740, 660, 340, 80), C_CAMINO)
+	draw_rect(Rect2(1060, 660, 60, 80), C_CAMINO)
+	# Entre Estac y Fotocopiado (y=540..580)
+	draw_rect(Rect2(0, 540, 220, 40), C_CAMINO)
+	# Fotocopiado ↔ Bloque C  (x=180..280, y=520..700)
+	draw_rect(Rect2(180, 520, 100, 180), C_CAMINO)
+
+	# ── AVENIDA PRINCIPAL  y=740..768 ────────────────────────
+	draw_rect(Rect2(0, 740, 1408, 28), C_CAMINO)
+	draw_rect(Rect2(0, 740, 1408,  3), C_CAMINO2)
 	draw_rect(Rect2(0, 765, 1408,  3), C_CAMINO2)
-	for lx in range(0, 1408, 60):
-		draw_rect(Rect2(lx, 733, 30, 4), Color(0.95, 0.88, 0.30, 0.70))
+	for lx in range(0, 1408, 50):
+		draw_rect(Rect2(lx, 752, 24, 3), Color(0.95, 0.88, 0.30, 0.70))
 
-	# ── PLAZA CENTRAL (este de BloqE y BloqB) ────────────────
-	draw_rect(Rect2(848, 208, 256, 496), C_PLAZA)
-	for gy in range(208, 704, 28):
-		draw_rect(Rect2(848, gy, 256, 14), C_CESPED2)
-	draw_rect(Rect2(832, 400, 16, 176), C_CESPED)   # paso BloqA↔BloqB (actualizado a y=400)
+	# ════════════════════════════════════════════════════════
+	# EDIFICIOS — layout real URBE (foto aérea)
+	# ════════════════════════════════════════════════════════
 
-	# Fuente central
-	var FC := Vector2(976, 456)
-	draw_circle(FC, 40, Color(0.06, 0.28, 0.62))
-	draw_arc(FC, 40, 0.0, TAU, 32, Color(0.30, 0.70, 0.95), 3.0)
-	draw_circle(FC, 24, Color(0.12, 0.45, 0.82))
-	draw_arc(FC, 7, 0.0, TAU, 12, Color(0.70, 0.92, 1.0), 2.0)
-	_draw_str(font, "Plaza Central", FC + Vector2(0, 54), Color(1,1,1,0.80), 8)
-
-	for ap in [Vector2(880, 240), Vector2(880, 340), Vector2(880, 440), Vector2(880, 540),
-			   Vector2(1060, 240), Vector2(1060, 340), Vector2(1060, 440), Vector2(1060, 540)]:
-		draw_circle(ap, 15, Color(0.14, 0.38, 0.14))
-		draw_circle(ap - Vector2(4,4), 6, Color(0.22, 0.54, 0.18))
-
-	# ── FILA 1  y=208..368 ───────────────────────────────────
-
-	# ESTACIONAMIENTO M5  x=0..192  y=208..368
+	# ESTACIONAMIENTO M5  x=0..220, y=120..540
 	var c_estac := _color_edif(5, C_ESTAC)
-	draw_rect(Rect2(0, 208, 192, 160), c_estac)
-	for i in range(1, 5):
-		draw_line(Vector2(i*48, 208), Vector2(i*48, 368), C_LINEA, 1.5)
-	draw_line(Vector2(0, 288), Vector2(192, 288), C_LINEA, 1.5)
-	draw_rect(Rect2(0, 208, 192, 160), C_TECHO, false, 2.0)
-	_txt(font, "P",         Rect2(0,  208, 48, 160), C_AMARILLO, 28)
-	_txt(font, "Estac.\nM5", Rect2(48, 208, 144, 160), C_TEXTO, 10)
-	_dibujar_indicador(Vector2(182, 218), 5)
+	draw_rect(Rect2(0, 120, 220, 420), c_estac)
+	# Líneas de parqueo
+	for i in range(1, 7):
+		draw_line(Vector2(float(i) * 30.0, 120.0), Vector2(float(i) * 30.0, 540.0), C_LINEA, 1.0)
+	for i in range(1, 14):
+		draw_line(Vector2(0.0, 120.0 + float(i) * 30.0), Vector2(220.0, 120.0 + float(i) * 30.0), C_LINEA, 0.6)
+	draw_rect(Rect2(0, 120, 220, 420), C_TECHO, false, 2.0)
+	_txt(font, "P",           Rect2(0, 120, 40, 420), C_AMARILLO, 28)
+	_txt(font, "Estacion.\nM5", Rect2(40, 120, 180, 420), C_TEXTO, 10)
+	_dibujar_indicador(Vector2(210, 130), 5)
 
-	# CAFETÍN M3  x=240..416  y=208..368
-	_edif(font, Rect2(240, 208, 176, 160), "Cafetín\nM3",
+	# CAFETÍN M3  x=280..480, y=120..280
+	_edif(font, Rect2(280, 120, 200, 160), "Cafetín\nM3",
 		_color_edif(3, C_CAFETIN), C_TECHO, C_TEXTO, 3)
-	draw_rect(Rect2(244, 210, 12, 14), Color(0.08, 0.28, 0.68))
-	draw_rect(Rect2(260, 210, 12, 14), Color(0.62, 0.48, 0.05))
-	draw_rect(Rect2(276, 210, 12, 14), Color(0.14, 0.50, 0.14))
+	# Banderines cafetín
+	draw_rect(Rect2(284, 122, 10, 12), Color(0.08, 0.28, 0.68))
+	draw_rect(Rect2(298, 122, 10, 12), Color(0.62, 0.48, 0.05))
+	draw_rect(Rect2(312, 122, 10, 12), Color(0.14, 0.50, 0.14))
 
-	# BIBLIOTECA M4  x=464..672  y=208..368
-	_edif(font, Rect2(464, 208, 208, 160), "Biblioteca\nM4",
-		_color_edif(4, C_EDIF_VIP), C_TECHO, C_TEXTO, 4)
+	# BLOQUE E M2  x=700..1080, y=120..420  (grande)
+	_edif(font, Rect2(700, 120, 380, 300), "Bloque E\nM2\n(Laboratorios)",
+		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
+	# Sub-división visual del Bloque E (2 alas)
+	draw_line(Vector2(890.0, 120.0), Vector2(890.0, 420.0), C_TECHO.lightened(0.2), 2.0)
 
-	# BLOQUE E M2  x=704..848  y=208..368
-	_edif(font, Rect2(704, 208, 144, 160), "Bloque E\nM2",
+	# BLOQUE D M2  x=280..480, y=320..480
+	_edif(font, Rect2(280, 320, 200, 160), "Bloque D\nM2",
 		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
 
-	# BLOQUE F M1  x=1152..1408  y=208..576
-	_edif(font, Rect2(1152, 208, 256, 368), "Bloque F\nM1",
+	# ESTUDIOS A DISTANCIA M1  x=1120..1408, y=120..660
+	_edif(font, Rect2(1120, 120, 288, 540), "Est. a Distancia\nM1",
 		_color_edif(1, C_EDIF_VIP), C_TECHO, C_TEXTO, 1)
+	# Banner SERVIEDUCA
+	draw_rect(Rect2(1130, 140, 200, 22), Color(0.08, 0.18, 0.08))
+	_draw_str(font, "SERVIEDUCA", Vector2(1230, 155), Color(0.40, 0.90, 0.45), 9)
 
-	# ── FILA 2  y=400..576  (pasillo 32px arriba y abajo) ────
-
-	# BLOQUE G M1  x=0..192  y=400..576
-	_edif(font, Rect2(0, 400, 192, 176), "Bloque G\nM1",
-		_color_edif(1, C_EDIF), C_TECHO, C_TEXTO, 1)
-
-	# BLOQUE D M2  x=240..416  y=400..576
-	_edif(font, Rect2(240, 400, 176, 176), "Bloque D\nM2",
+	# BLOQUE C M2  x=280..460, y=520..640
+	_edif(font, Rect2(280, 520, 180, 120), "Bloque C\nM2",
 		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
 
-	# BLOQUE A M2  x=464..640  y=400..576
-	_edif(font, Rect2(464, 400, 176, 176), "Bloque A\nM2",
+	# BLOQUE B M2  x=520..700, y=520..640
+	_edif(font, Rect2(520, 520, 180, 120), "Bloque B\nM2",
 		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
 
-	# BLOQUE B M2  x=672..832  y=400..576
-	_edif(font, Rect2(672, 400, 160, 176), "Bloque B\nM2",
-		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
-
-	# ── FILA 3  y=608..704  (pasillo 32px arriba, avda abajo) ─
-
-	# FOTOCOPIADO M1  x=0..144  y=608..704
-	_edif(font, Rect2(0, 608, 144, 96), "Fotoc.\nM1",
-		_color_edif(1, C_EDIF), C_TECHO, C_TEXTO, 1)
-
-	# BLOQUE C M2  x=240..400  y=608..704
-	_edif(font, Rect2(240, 608, 160, 96), "Bloque C\nM2",
-		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
-
-	# RECTORADO M6  x=464..880  y=608..704
-	_edif(font, Rect2(464, 608, 416, 96), "Rectorado / Auditorio   M6",
+	# RECTORADO M6  x=740..1060, y=480..660
+	_edif(font, Rect2(740, 480, 320, 180), "Rectorado  M6",
 		_color_edif(6, C_EDIF_VIP), C_TECHO, C_TEXTO, 6)
 
-	# ÁREA SERVICIOS M6  x=1152..1408  y=608..704
-	_edif(font, Rect2(1152, 608, 256, 96), "Área Servicios\nM6",
-		_color_edif(6, C_EDIF_VIP), C_TECHO, C_TEXTO, 6)
+	# FOTOCOPIADO M1  x=0..180, y=580..700
+	_edif(font, Rect2(0, 580, 180, 120), "Fotocop.\nM1",
+		_color_edif(1, C_EDIF), C_TECHO, C_TEXTO, 1)
 
-	# ── ÁRBOLES LATERALES ────────────────────────────────────
+	# BLOQUE A M2  x=280..700, y=680..740  (franja inferior, el más sur)
+	_edif(font, Rect2(280, 680, 420, 60), "Bloque A     M2",
+		_color_edif(2, C_EDIF), C_TECHO, C_TEXTO, 2)
+
+	# ── ÁRBOLES del campus ────────────────────────────────────
 	for a in [
-		Vector2(168, 296), Vector2(168, 384),   # izq fila1 / pasillo 1→2
-		Vector2(168, 488), Vector2(168, 592),   # izq fila2 / pasillo 2→3
-		Vector2(168, 656),                       # izq fila3
-		Vector2(392, 296), Vector2(392, 384),
-		Vector2(392, 488), Vector2(392, 592),
-		Vector2(392, 656),
-		Vector2(1080, 296), Vector2(1080, 488), Vector2(1080, 656)
+		# Corredor oeste
+		Vector2(250, 180), Vector2(250, 420), Vector2(250, 610),
+		# Sur del Estac
+		Vector2(110, 550),
+		# Entre patio y edificios
+		Vector2(465, 330), Vector2(465, 500),
+		# Este del Rectorado / sur de BloqueE
+		Vector2(720, 450), Vector2(1060, 450),
+		# Frente avenida
+		Vector2(120, 720), Vector2(740, 720), Vector2(1190, 720),
 	]:
-		draw_circle(a, 13, Color(0.14, 0.38, 0.14))
+		draw_circle(a, 12, Color(0.14, 0.38, 0.14))
 		draw_circle(a - Vector2(3,3), 5, Color(0.22, 0.54, 0.18))
 
 	# ── CONTENEDORES DE RECICLAJE ────────────────────────────
@@ -299,8 +305,8 @@ func _draw() -> void:
 
 	# ── PÁJAROS AMBIENTALES ──────────────────────────────────
 	for p in _pajaros:
-		var bx  : float = float(p["x"])
-		var by  : float = float(p["y"]) + sin(_t_mapa * float(p["wf"]) * 0.5 + float(p["f"])) * 2.5
+		var bx   : float = float(p["x"])
+		var by   : float = float(p["y"]) + sin(_t_mapa * float(p["wf"]) * 0.5 + float(p["f"])) * 2.5
 		var wing : float = 4.5 + sin(_t_mapa * float(p["wf"]) + float(p["f"])) * 3.0
 		var bird_col := Color(0.08, 0.08, 0.10, 0.70)
 		draw_line(Vector2(bx - wing, by - wing * 0.5), Vector2(bx, by), bird_col, 1.3)
@@ -317,14 +323,14 @@ func _draw() -> void:
 				  Color(0.75, 0.92, 1.0, a), 1.5)
 
 	# ── SEÑAL DE ENTRADA ─────────────────────────────────────
-	draw_rect(Rect2(580, 714, 144, 42), C_TECHO)
-	draw_rect(Rect2(583, 717, 138, 36), C_AZUL_OS)
-	draw_rect(Rect2(583, 717, 138, 36), C_AMARILLO, false, 2.0)
-	_draw_str(font, "ENTRADA URBE", Vector2(652, 738), C_TEXTO, 9)
+	draw_rect(Rect2(380, 744, 140, 20), C_TECHO)
+	draw_rect(Rect2(383, 746, 134, 16), C_AZUL_OS)
+	draw_rect(Rect2(383, 746, 134, 16), C_AMARILLO, false, 1.5)
+	_draw_str(font, "ENTRADA CAMPUS URBE", Vector2(450, 757), C_TEXTO, 8)
 
-	draw_circle(Vector2(744, 736), 22, C_AMARILLO)
-	draw_arc(Vector2(744, 736), 22, 0.0, TAU, 32, C_TECHO, 2.5)
-	_draw_str(font, "URBE", Vector2(744, 740), C_AZUL_OS, 9)
+	draw_circle(Vector2(560, 754), 9, C_AMARILLO)
+	draw_arc(Vector2(560, 754), 9, 0.0, TAU, 16, C_TECHO, 1.5)
+	_draw_str(font, "U", Vector2(560, 757), C_AZUL_OS, 7)
 
 	# ── MAPA DE CALOR (opcional, encima de todo) ──────────────
 	if mostrar_calor:
@@ -336,15 +342,15 @@ func _draw() -> void:
 # papel(azul) vidrio(verde) general(gris)
 func _dibujar_contenedores(font: Font) -> void:
 	var spots : Array = [
-		Vector2(248, 350),   # Cafetín (pasillo fila1, frente sur)
-		Vector2(696, 350),   # Bloque E (pasillo fila1, frente sur)
-		Vector2(470, 350),   # Biblioteca (pasillo fila1, frente sur)
-		Vector2(248, 582),   # Bloque D (pasillo fila2, frente sur)
-		Vector2(470, 582),   # Bloque A (pasillo fila2, frente sur)
-		Vector2(72,  582),   # Bloque G (pasillo fila2, frente sur)
-		Vector2(150, 714),   # Fotocopiado (avenida norte)
-		Vector2(550, 714),   # Rectorado (avenida norte)
-		Vector2(940, 508),   # Plaza Central (junto a fuente)
+		Vector2(380,  96),   # Cafetín (camino norte, frente al edificio)
+		Vector2(590,  96),   # Patio (camino norte)
+		Vector2(250, 560),   # Corredor oeste (entre Estac y Fotocopiado)
+		Vector2(380, 298),   # Pasillo Cafetín↔BloqueD
+		Vector2(380, 498),   # Pasillo BloqueD↔BloqueC
+		Vector2(460, 580),   # Pasillo entre Bloque C y B
+		Vector2(760, 448),   # Zona sur BloqueE / norte Rectorado
+		Vector2(490, 750),   # Avenida (frente a BloqueA)
+		Vector2(900, 710),   # Sur del Rectorado / norte avenida
 	]
 	for sp in spots:
 		_cluster_contenedor(sp, font)

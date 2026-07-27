@@ -7,8 +7,8 @@ extends Node2D
 
 const MAPA_ANCHO : float = 1408.0
 const MAPA_ALTO  : float =  768.0
-const SPAWN_X    : float =  672.0
-const SPAWN_Y    : float =  736.0   # avenida principal
+const SPAWN_X    : float =  490.0
+const SPAWN_Y    : float =  762.0   # avenida principal — 10px al sur del tile de BloqueA
 
 const NPC_ESCENA                := preload("res://scenes/mapa/npc_base.tscn")
 const QUIZ_ESCENA               := preload("res://scenes/ui/quiz_npc.tscn")
@@ -22,6 +22,8 @@ const LEADERBOARD_ESCENA        := preload("res://scenes/ui/leaderboard.gd")
 const SIMULADOR_ESCENA          := preload("res://scenes/ui/simulador_decision.gd")
 const RESULTADOS_ESCENA         := preload("res://scenes/ui/resultados_greenmetric.gd")
 const ZONA_VERDE_ESCENA         := preload("res://scenes/mapa/zona_verde.gd")
+const CONTENEDOR_ESCENA         := preload("res://scenes/mapa/contenedor_basura.gd")
+const EDIFICIO_ESCENA           := preload("res://scenes/edificios/escena_edificio.gd")
 
 # ── Sistema de niveles ───────────────────────────────────────
 const NIVELES : Array = [
@@ -33,13 +35,13 @@ const NIVELES : Array = [
 	{"nombre": "EcoLíder",     "xp_min": 12000, "xp_max": 12000},
 ]
 
-# ── Datos de los NPCs (uno por zona) ─────────────────────────
+# ── Datos de los NPCs (uno por zona) — posiciones en nuevo mapa URBE ─
 var DATOS_NPCS : Array = [
 	# ── M6 Educación ────────────────────────────────────────
 	{
 		"nombre":    "Rector Morales",
 		"mision_id": "mision_rector",
-		"pos":       Vector2(672, 592),   # paso fila 2→3 (32px), frente norte Rectorado
+		"pos":       Vector2(860, 510),   # frente norte del Rectorado (en ZonaRectorado y=472..672)
 		"color":     Color(0.5, 0.1, 0.9),
 		"dialogos":  PackedStringArray([
 			"Bienvenido, Eco-Ranger. Soy el Rector de URBE.",
@@ -51,7 +53,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Dra. Luna",
 		"mision_id": "mision_educacion",
-		"pos":       Vector2(1128, 656),   # camino vertical derecho, junto a Área Servicios
+		"pos":       Vector2(1100, 400),   # corredor este (BloqueE↔EstDistancia x=1080..1120)
 		"color":     Color(0.35, 0.0, 0.65),
 		"dialogos":  PackedStringArray([
 			"Por fin llegas! Soy la Dra. Luna, coordinadora de Educacion e Investigacion.",
@@ -64,7 +66,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Prof. González",
 		"mision_id": "mision_bloque_a",
-		"pos":       Vector2(520, 384),   # paso fila 1→2 (32px), frente norte Bloque A
+		"pos":       Vector2(380, 660),   # pasillo BloqueC/B↔BloqueA (y=640..680)
 		"color":     Color(0.9, 0.45, 0.0),
 		"dialogos":  PackedStringArray([
 			"Hola! Soy el Prof. Gonzalez, docente del Bloque A.",
@@ -76,7 +78,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Dr. Pérez",
 		"mision_id": "mision_bloque_b",
-		"pos":       Vector2(648, 488),   # entre Bloque A y Bloque B
+		"pos":       Vector2(610, 590),   # dentro de ZonaBloqueB (y=516..644)
 		"color":     Color(0.85, 0.35, 0.0),
 		"dialogos":  PackedStringArray([
 			"Doctor Perez, coordinador de Energia y Cambio Climatico.",
@@ -88,7 +90,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Ing. Herrera",
 		"mision_id": "mision_bloque_c",
-		"pos":       Vector2(440, 656),   # camino centro-izq, junto a Bloque C
+		"pos":       Vector2(380, 500),   # pasillo BloqueD↔BloqueC (y=480..520)
 		"color":     Color(0.95, 0.55, 0.0),
 		"dialogos":  PackedStringArray([
 			"Buenas! Soy la Ing. Herrera, tecnica del Bloque C.",
@@ -100,7 +102,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Técn. Ruiz",
 		"mision_id": "mision_bloque_d",
-		"pos":       Vector2(440, 488),   # camino centro-izq, junto a Bloque D
+		"pos":       Vector2(380, 300),   # pasillo Cafetín↔BloqueD (y=280..320)
 		"color":     Color(0.80, 0.40, 0.0),
 		"dialogos":  PackedStringArray([
 			"Hola! Soy el Tecn. Ruiz, responsable de instalaciones del Bloque D.",
@@ -112,7 +114,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Coord. Salinas",
 		"mision_id": "mision_bloque_e",
-		"pos":       Vector2(768, 190),   # camino superior, frente a Bloque E
+		"pos":       Vector2(600, 170),   # patio central, norte (frente a BloqueE)
 		"color":     Color(0.90, 0.50, 0.05),
 		"dialogos":  PackedStringArray([
 			"Soy la Coord. Salinas, encargada del Bloque E norte del campus.",
@@ -125,31 +127,19 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Ing. Ramírez",
 		"mision_id": "mision_bloque_f",
-		"pos":       Vector2(1128, 392),   # camino vertical derecho, junto a Bloque F
+		"pos":       Vector2(1100, 250),   # corredor este, zona norte
 		"color":     Color(0.2, 0.7, 0.2),
 		"dialogos":  PackedStringArray([
 			"Hola! Soy la Ing. Ramirez, coordinadora de Entorno e Infraestructura.",
-			"El Bloque F es el edificio mas grande del campus, con jardines circundantes.",
+			"El edificio de Estudios a Distancia es el mas grande del campus por el este.",
 			"GreenMetric exige que al menos el 25% del campus sea area verde con politica ambiental.",
 			"Responde este cuestionario sobre el modulo de Entorno e Infraestructura."
 		])
 	},
 	{
-		"nombre":    "Arq. Fernández",
-		"mision_id": "mision_bloque_g",
-		"pos":       Vector2(216, 488),   # camino izquierdo, junto a Bloque G
-		"color":     Color(0.25, 0.75, 0.25),
-		"dialogos":  PackedStringArray([
-			"Hola! Soy el Arq. Fernandez, supervisor de infraestructura del Bloque G.",
-			"El Bloque G tiene jardines internos que contribuyen al area verde del campus.",
-			"GreenMetric valora los espacios verdes y las certificaciones ecologicas institucionales.",
-			"Responde sobre infraestructura sostenible y areas verdes en la universidad."
-		])
-	},
-	{
 		"nombre":    "Sr. Blanco",
 		"mision_id": "mision_fotocopiado",
-		"pos":       Vector2(168, 656),   # entre Fotocopiado y camino izquierdo
+		"pos":       Vector2(90, 558),   # pasillo Estac↔Fotocopiado (y=540..580, x=0..180)
 		"color":     Color(0.3, 0.65, 0.3),
 		"dialogos":  PackedStringArray([
 			"Buenas! Soy el Sr. Blanco, del Centro de Fotocopiado.",
@@ -162,12 +152,12 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Lic. Torres",
 		"mision_id": "mision_agua",
-		"pos":       Vector2(568, 190),   # camino superior, frente a Biblioteca
+		"pos":       Vector2(560, 430),   # patio central sur (fuente, zona de agua)
 		"color":     Color(0.0, 0.55, 0.75),
 		"dialogos":  PackedStringArray([
 			"Buenas, soy la Lic. Torres, responsable del modulo de Agua.",
 			"GreenMetric evalua si el campus tiene programas de conservacion hidrica y medidores de consumo.",
-			"Problema: la Biblioteca consume mucha agua pero no tenemos hidrometros instalados.",
+			"El Patio Central tiene fuentes ornamentales pero carece de sistemas de riego eficiente.",
 			"Responde este cuestionario sobre gestion del agua en el campus universitario."
 		])
 	},
@@ -175,7 +165,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Carlos",
 		"mision_id": "mision_transporte",
-		"pos":       Vector2(216, 288),   # camino izquierdo, junto a Estacionamiento
+		"pos":       Vector2(250, 330),   # corredor oeste, junto al Estacionamiento
 		"color":     Color(0.1, 0.3, 0.8),
 		"dialogos":  PackedStringArray([
 			"Hola! Soy Carlos, coordinador de Transporte Sostenible.",
@@ -188,7 +178,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Yulimar",
 		"mision_id": "mision_residuos",
-		"pos":       Vector2(440, 288),   # camino centro-izq, junto a Cafetín
+		"pos":       Vector2(340, 100),   # camino norte, frente al Cafetín
 		"color":     Color(0.85, 0.75, 0.0),
 		"dialogos":  PackedStringArray([
 			"Eco-Ranger! Soy Yulimar, del comite estudiantil de reciclaje.",
@@ -200,20 +190,20 @@ var DATOS_NPCS : Array = [
 ]
 
 # ── Zona → misión (lookup directo por zona_key, sin ambigüedad) ─
+# Mapa actualizado: layout real URBE (foto aérea)
 var ZONA_A_MISION : Dictionary = {
-	"ZonaRectorado":       {"mision_id": "mision_rector",      "modulo_id": 6, "npc": "Rector Morales", "progreso": 0.55},
-	"ZonaAreaServicios":   {"mision_id": "mision_educacion",   "modulo_id": 6, "npc": "Dra. Luna",      "progreso": 0.55},
-	"ZonaBloqueA":         {"mision_id": "mision_bloque_a",    "modulo_id": 2, "npc": "Prof. González", "progreso": 0.38},
-	"ZonaBloqueB":         {"mision_id": "mision_bloque_b",    "modulo_id": 2, "npc": "Dr. Pérez",      "progreso": 0.42},
-	"ZonaBloqueC":         {"mision_id": "mision_bloque_c",    "modulo_id": 2, "npc": "Ing. Herrera",   "progreso": 0.35},
-	"ZonaBloqueD":         {"mision_id": "mision_bloque_d",    "modulo_id": 2, "npc": "Técn. Ruiz",     "progreso": 0.45},
-	"ZonaBloqueE":         {"mision_id": "mision_bloque_e",    "modulo_id": 2, "npc": "Coord. Salinas", "progreso": 0.40},
-	"ZonaBloqueF":         {"mision_id": "mision_bloque_f",    "modulo_id": 1, "npc": "Ing. Ramírez",   "progreso": 0.35},
-	"ZonaBloqueG":         {"mision_id": "mision_bloque_g",    "modulo_id": 1, "npc": "Arq. Fernández", "progreso": 0.40},
-	"ZonaFotocopiado":     {"mision_id": "mision_fotocopiado", "modulo_id": 1, "npc": "Sr. Blanco",     "progreso": 0.25},
-	"ZonaBiblioteca":      {"mision_id": "mision_agua",        "modulo_id": 4, "npc": "Lic. Torres",    "progreso": 0.45},
-	"ZonaEstacionamiento": {"mision_id": "mision_transporte",  "modulo_id": 5, "npc": "Carlos",         "progreso": 0.22},
-	"ZonaCafetin":         {"mision_id": "mision_residuos",    "modulo_id": 3, "npc": "Yulimar",        "progreso": 0.30},
+	"ZonaRectorado":       {"mision_id": "mision_rector",      "modulo_id": 6, "npc": "Rector Morales", "progreso": 0.55, "nombre": "Rectorado"},
+	"ZonaAreaServicios":   {"mision_id": "mision_educacion",   "modulo_id": 6, "npc": "Dra. Luna",      "progreso": 0.55, "nombre": "SERVIEDUCA"},
+	"ZonaBloqueA":         {"mision_id": "mision_bloque_a",    "modulo_id": 2, "npc": "Prof. González", "progreso": 0.38, "nombre": "Bloque A"},
+	"ZonaBloqueB":         {"mision_id": "mision_bloque_b",    "modulo_id": 2, "npc": "Dr. Pérez",      "progreso": 0.42, "nombre": "Bloque B"},
+	"ZonaBloqueC":         {"mision_id": "mision_bloque_c",    "modulo_id": 2, "npc": "Ing. Herrera",   "progreso": 0.35, "nombre": "Bloque C"},
+	"ZonaBloqueD":         {"mision_id": "mision_bloque_d",    "modulo_id": 2, "npc": "Técn. Ruiz",     "progreso": 0.45, "nombre": "Bloque D"},
+	"ZonaBloqueE":         {"mision_id": "mision_bloque_e",    "modulo_id": 2, "npc": "Coord. Salinas", "progreso": 0.40, "nombre": "Bloque E"},
+	"ZonaBloqueF":         {"mision_id": "mision_bloque_f",    "modulo_id": 1, "npc": "Ing. Ramírez",   "progreso": 0.35, "nombre": "Est. a Distancia"},
+	"ZonaFotocopiado":     {"mision_id": "mision_fotocopiado", "modulo_id": 1, "npc": "Sr. Blanco",     "progreso": 0.25, "nombre": "Fotocopiado"},
+	"ZonaPatio":           {"mision_id": "mision_agua",        "modulo_id": 4, "npc": "Lic. Torres",    "progreso": 0.45, "nombre": "Patio Central"},
+	"ZonaEstacionamiento": {"mision_id": "mision_transporte",  "modulo_id": 5, "npc": "Carlos",         "progreso": 0.22, "nombre": "Estacionamiento"},
+	"ZonaCafetin":         {"mision_id": "mision_residuos",    "modulo_id": 3, "npc": "Yulimar",        "progreso": 0.30, "nombre": "Cafetín"},
 }
 
 # ── Quiz por misión ──────────────────────────────────────────
@@ -383,6 +373,7 @@ var _crisis_ui        : CanvasLayer = null
 var _leaderboard_ui   : CanvasLayer = null
 var _sim_decision_ui  : CanvasLayer = null
 var _resultados_ui    : CanvasLayer = null
+var _edificio_ui      : CanvasLayer = null
 var _zonas_verdes        : Array       = []   # Array[Node2D]
 var _panel_zona_mejora   : Panel       = null
 var _pzm_titulo_lbl      : Label       = null
@@ -391,6 +382,16 @@ var _pzm_xp_lbl          : Label       = null
 var _pzm_costo_lbl       : Label       = null
 var _pzm_btn_mejorar     : Button      = null
 var _zona_en_panel       : Node2D      = null
+
+# ── Contenedores de basura ────────────────────────────────────
+var _contenedores        : Array    = []
+var _panel_contenedor    : Panel    = null
+var _pc_titulo_lbl       : Label    = null
+var _pc_barra_bg         : ColorRect = null
+var _pc_barra_fill       : ColorRect = null
+var _pc_estado_lbl       : Label    = null
+var _pc_btn_servicio     : Button   = null
+var _contenedor_en_panel : Node2D   = null
 var _timer_crisis     : float       = 0.0
 const _CRISIS_MIN     : float       = 90.0
 const _CRISIS_MAX     : float       = 180.0
@@ -426,7 +427,14 @@ func _ready() -> void:
 	_construir_notificacion_zona()
 	_construir_panel_completado()
 	_construir_panel_zona_mejora()
+	_construir_panel_contenedor()
 	_actualizar_hud()
+
+	# Escena de interior de edificio (overlay sobre el campus)
+	_edificio_ui = EDIFICIO_ESCENA.new()
+	add_child(_edificio_ui)
+	_edificio_ui.hablar_npc_solicitado.connect(_on_hablar_npc_edificio)
+	_edificio_ui.salida_solicitada.connect(_on_salida_edificio)
 
 	# Conectar señal de interacción del jugador para efecto de cámara
 	jugador.interaccion_iniciada.connect(_on_interaccion_iniciada)
@@ -442,8 +450,10 @@ func _ready() -> void:
 	_mision_ui.mision_aceptada.connect(_on_mision_aceptada)
 	_mision_ui.mision_cancelada.connect(_on_mision_cancelada)
 
-	_dialogo_ui = DIALOGO_ESCENA.instantiate()
-	add_child(_dialogo_ui)
+	# Reusar el nodo DialogoNPC que ya está en la escena para que tanto el
+	# flujo de zona (→ edificio → "Hablar") como el flujo directo de NPC
+	# compartan la misma instancia y la señal dialogo_terminado esté conectada.
+	_dialogo_ui = $DialogoNPC
 	_dialogo_ui.dialogo_terminado.connect(_on_dialogo_terminado)
 
 	_quiz_ui = QUIZ_ESCENA.instantiate()
@@ -620,27 +630,59 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.keycode != KEY_E:
 		return
+	# Si alguna UI de misión/diálogo/quiz ya está activa, no interferir
 	if (_dialogo_ui and _dialogo_ui.visible) or (_quiz_ui and _quiz_ui.visible):
 		return
 	if _mision_ui and _mision_ui.visible:
 		return
 	if _minijuego_residuos and _minijuego_residuos.visible:
 		return
+	# E cierra la escena de edificio (funciona como "Salir")
+	if _edificio_ui and _edificio_ui.visible:
+		_on_salida_edificio()
+		get_viewport().set_input_as_handled()
+		return
+	if _panel_contenedor and _panel_contenedor.visible:
+		_cerrar_panel_contenedor()
+		get_viewport().set_input_as_handled()
+		return
 	if _zona_activa != "":
+		# En zona: este nodo toma el evento para mostrar el interior del edificio.
+		# Evita que jugador.gd también dispare npc_cercano.iniciar_dialogo().
 		_mostrar_pantalla_mision()
+		get_viewport().set_input_as_handled()
 	else:
+		# Sin zona activa: no consumimos el evento; jugador._unhandled_input
+		# puede activar la interacción directa con el NPC si está cerca.
+		_verificar_contenedor_cercano()
 		_verificar_zona_verde_cercana()
 
 
-# ── Pantalla de misión ───────────────────────────────────────
+# ── Pantalla de misión — muestra interior del edificio primero ─
 func _mostrar_pantalla_mision() -> void:
 	if not ZONA_A_MISION.has(_zona_activa):
 		return
-	var info = ZONA_A_MISION[_zona_activa]
+	var info : Dictionary = ZONA_A_MISION[_zona_activa]
+	if is_instance_valid(_edificio_ui):
+		_edificio_ui.mostrar(_zona_activa, info, info["npc"])
+	else:
+		_mision_ui.mostrar(info["modulo_id"], _nombre_activo, info["npc"], info["mision_id"], info["progreso"])
+
+
+func _on_hablar_npc_edificio() -> void:
+	if not ZONA_A_MISION.has(_zona_activa): return
+	var info : Dictionary = ZONA_A_MISION[_zona_activa]
 	_mision_ui.mostrar(info["modulo_id"], _nombre_activo, info["npc"], info["mision_id"], info["progreso"])
 
 
+func _on_salida_edificio() -> void:
+	if is_instance_valid(_edificio_ui):
+		_edificio_ui.ocultar()
+
+
 func _on_mision_aceptada(mision_id: String) -> void:
+	if is_instance_valid(_edificio_ui) and _edificio_ui.visible:
+		_edificio_ui.ocultar()
 	_mision_activa = mision_id
 	for datos in DATOS_NPCS:
 		if datos["mision_id"] == mision_id:
@@ -1224,6 +1266,9 @@ func _init_sistemas_eva() -> void:
 	# Zonas verdes adoptables
 	_spawn_zonas_verdes()
 
+	# Contenedores de basura
+	_spawn_contenedores()
+
 	# EcoCredits label (esquina superior derecha)
 	_hud_creditos_lbl = Label.new()
 	_hud_creditos_lbl.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -1349,16 +1394,16 @@ func _sfx(nombre: String) -> void:
 # ZONAS VERDES ADOPTABLES
 # ════════════════════════════════════════════════════════════
 const DATOS_ZONAS_VERDES : Array = [
-	# En Plaza Central (área verde x=848-1104, y=208-704) — la más grande
-	{"nombre": "Plaza Central",   "pos": Vector2(976, 456), "mod": 4, "radio": 36.0},
-	# Corredor izquierdo fila1 (gap 48px entre Estacionamiento y Cafetín)
-	{"nombre": "Corredor Oeste",  "pos": Vector2(216, 288), "mod": 1, "radio": 18.0},
-	# Corredor centro fila1 (gap 48px entre Cafetín y Biblioteca)
-	{"nombre": "Jardín Central",  "pos": Vector2(440, 288), "mod": 3, "radio": 18.0},
-	# Zona abierta al este del Rectorado (gap 272px entre Rectorado y Área Servicios)
-	{"nombre": "Zona Cultural",   "pos": Vector2(1016, 656), "mod": 6, "radio": 28.0},
-	# Avenida principal (debajo de todos los edificios, y=736)
-	{"nombre": "Avenida URBE",    "pos": Vector2(672, 736), "mod": 5, "radio": 28.0},
+	# Patio Central (x=480..700, y=120..480) — fuente y arboleda
+	{"nombre": "Patio Central",   "pos": Vector2(590, 350), "mod": 4, "radio": 36.0},
+	# Corredor oeste norte (junto a Estacionamiento)
+	{"nombre": "Corredor Oeste",  "pos": Vector2(250, 200), "mod": 1, "radio": 18.0},
+	# Camino norte frente a Bloque E
+	{"nombre": "Jardín Norte",    "pos": Vector2(890, 100), "mod": 3, "radio": 18.0},
+	# Sur del Rectorado (área abierta y=660..740, x=740..1060)
+	{"nombre": "Zona Cultural",   "pos": Vector2(870, 700), "mod": 6, "radio": 28.0},
+	# Avenida principal frente a Bloque A
+	{"nombre": "Avenida URBE",    "pos": Vector2(490, 752), "mod": 5, "radio": 28.0},
 ]
 
 func _spawn_zonas_verdes() -> void:
@@ -1472,6 +1517,209 @@ func _crear_btn_mapa_calor() -> void:
 		btn.offset_bottom = -8
 		btn.pressed.connect(d["accion"])
 		_hud_canvas.add_child(btn)
+
+
+# ════════════════════════════════════════════════════════════
+# CONTENEDORES DE BASURA
+# ════════════════════════════════════════════════════════════
+const DATOS_CONTENEDORES : Array = [
+	# Camino norte frente al Cafetín (y=82..120, x=280..480)
+	{"nombre": "Cafetín",        "pos": Vector2(430, 100)},
+	# Patio central (x=480..700, y=120..480) — zona alta
+	{"nombre": "Patio Central",  "pos": Vector2(640, 170)},
+	# Corredor oeste (x=220..280), nivel medio
+	{"nombre": "Corredor Oeste", "pos": Vector2(250, 500)},
+	# Sur del Rectorado (y=660..740, x=740..1060)
+	{"nombre": "Sur Rectorado",  "pos": Vector2(870, 705)},
+	# Avenida frente al Bloque A
+	{"nombre": "Avenida URBE",   "pos": Vector2(490, 752)},
+]
+
+func _spawn_contenedores() -> void:
+	for dato : Dictionary in DATOS_CONTENEDORES:
+		var c := CONTENEDOR_ESCENA.new()
+		c.nombre_bin = dato["nombre"]
+		c.position   = dato["pos"]
+		c.z_index    = 2
+		add_child(c)
+		c.vaciado.connect(_on_contenedor_vaciado.bind(c))
+		_contenedores.append(c)
+	print("🗑 %d contenedores instanciados" % _contenedores.size())
+
+
+func _construir_panel_contenedor() -> void:
+	_panel_contenedor = Panel.new()
+	_panel_contenedor.set_anchors_preset(Control.PRESET_CENTER)
+	_panel_contenedor.custom_minimum_size = Vector2(340, 210)
+	_panel_contenedor.offset_left   = -170
+	_panel_contenedor.offset_top    = -105
+	_panel_contenedor.offset_right  =  170
+	_panel_contenedor.offset_bottom =  105
+	var ps := StyleBoxFlat.new()
+	ps.bg_color     = Color(0.06, 0.06, 0.08, 0.97)
+	ps.border_color = Color(0.55, 0.42, 0.12)
+	ps.set_border_width_all(3)
+	ps.set_corner_radius_all(14)
+	ps.shadow_color = Color(0.40, 0.30, 0.05, 0.50)
+	ps.shadow_size  = 16
+	_panel_contenedor.add_theme_stylebox_override("panel", ps)
+	_panel_contenedor.visible = false
+	_hud_canvas.add_child(_panel_contenedor)
+
+	var mg := MarginContainer.new()
+	mg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for m in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		mg.add_theme_constant_override(m, 20)
+	_panel_contenedor.add_child(mg)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	mg.add_child(vbox)
+
+	# Título
+	_pc_titulo_lbl = Label.new()
+	_pc_titulo_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pc_titulo_lbl.add_theme_font_size_override("font_size", 15)
+	_pc_titulo_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30))
+	vbox.add_child(_pc_titulo_lbl)
+
+	# Barra de llenado
+	_pc_barra_bg = ColorRect.new()
+	_pc_barra_bg.custom_minimum_size = Vector2(280, 16)
+	_pc_barra_bg.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_pc_barra_bg.color = Color(0.12, 0.10, 0.06)
+	vbox.add_child(_pc_barra_bg)
+
+	_pc_barra_fill = ColorRect.new()
+	_pc_barra_fill.size = Vector2(0, 16)
+	_pc_barra_fill.color = Color(0.28, 0.72, 0.22)
+	_pc_barra_bg.add_child(_pc_barra_fill)
+
+	# Estado / porcentaje
+	_pc_estado_lbl = Label.new()
+	_pc_estado_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pc_estado_lbl.add_theme_font_size_override("font_size", 12)
+	_pc_estado_lbl.add_theme_color_override("font_color", Color(0.80, 0.80, 0.80))
+	vbox.add_child(_pc_estado_lbl)
+
+	# Botón llamar servicio
+	_pc_btn_servicio = Button.new()
+	_pc_btn_servicio.custom_minimum_size = Vector2(0, 40)
+	_pc_btn_servicio.add_theme_font_size_override("font_size", 13)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color     = Color(0.12, 0.22, 0.10)
+	sb.border_color = Color(0.35, 0.78, 0.28)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(8)
+	_pc_btn_servicio.add_theme_stylebox_override("normal", sb)
+	_pc_btn_servicio.pressed.connect(_on_btn_servicio_contenedor)
+	vbox.add_child(_pc_btn_servicio)
+
+	# Botón cerrar
+	var btn_c := Button.new()
+	btn_c.text = "Cerrar"
+	btn_c.custom_minimum_size = Vector2(0, 32)
+	btn_c.add_theme_font_size_override("font_size", 11)
+	var sc := StyleBoxFlat.new()
+	sc.bg_color     = Color(0.12, 0.06, 0.06)
+	sc.border_color = Color(0.55, 0.20, 0.20)
+	sc.set_border_width_all(1)
+	sc.set_corner_radius_all(6)
+	btn_c.add_theme_stylebox_override("normal", sc)
+	btn_c.pressed.connect(_cerrar_panel_contenedor)
+	vbox.add_child(btn_c)
+
+
+func _verificar_contenedor_cercano() -> bool:
+	var radio : float = 52.0
+	for nodo in _contenedores:
+		var c : Node2D = nodo as Node2D
+		if not is_instance_valid(c): continue
+		if jugador.global_position.distance_to(c.global_position) > radio: continue
+		_mostrar_panel_contenedor(c)
+		return true
+	return false
+
+
+func _mostrar_panel_contenedor(c: Node2D) -> void:
+	_contenedor_en_panel = c
+	var pct  : int    = c.porcentaje()
+	var lleno : bool  = c.esta_lleno()
+	var serv  : bool  = c.en_servicio
+
+	_pc_titulo_lbl.text = "🗑 Contenedor — %s" % c.nombre_bin
+
+	# Barra de llenado
+	var bar_w : float = 280.0
+	var col : Color
+	if pct >= 80:
+		col = Color(0.88, 0.12, 0.12)
+	elif pct >= 50:
+		col = Color(0.88, 0.72, 0.08)
+	else:
+		col = Color(0.28, 0.72, 0.22)
+	_pc_barra_fill.color  = col
+	_pc_barra_fill.size.x = bar_w * clampf(pct / 100.0, 0.0, 1.0)
+
+	# Texto de estado
+	if serv:
+		_pc_estado_lbl.text = "🧹 Limpiando... el servicio está en camino"
+		_pc_btn_servicio.text    = "En servicio..."
+		_pc_btn_servicio.disabled = true
+	else:
+		var estado_txt : String
+		if pct >= 90:
+			estado_txt = "⚠ URGENTE — %d%% lleno   (+20 XP si lo vacías ahora)" % pct
+		elif pct >= 70:
+			estado_txt = "Bastante lleno — %d%%   (+15 XP)" % pct
+		elif pct >= 50:
+			estado_txt = "Medio lleno — %d%%   (+10 XP)" % pct
+		else:
+			estado_txt = "Poco lleno — %d%%   (+5~7 XP)" % pct
+		_pc_estado_lbl.text       = estado_txt
+		_pc_btn_servicio.text     = "📞 Llamar servicio de limpieza"
+		_pc_btn_servicio.disabled = false
+
+	_panel_contenedor.modulate.a = 0.0
+	_panel_contenedor.visible    = true
+	var tw := create_tween()
+	tw.tween_property(_panel_contenedor, "modulate:a", 1.0, 0.18)
+
+
+func _cerrar_panel_contenedor() -> void:
+	if not is_instance_valid(_panel_contenedor): return
+	var tw := create_tween()
+	tw.tween_property(_panel_contenedor, "modulate:a", 0.0, 0.14)
+	tw.tween_callback(func(): _panel_contenedor.visible = false)
+	_contenedor_en_panel = null
+
+
+func _on_btn_servicio_contenedor() -> void:
+	if not is_instance_valid(_contenedor_en_panel): return
+	var c : Node2D = _contenedor_en_panel
+	if c.en_servicio: return
+	c.solicitar_servicio()
+	_sfx("zona")
+	_cerrar_panel_contenedor()
+	_mostrar_notificacion_zona("📞", "Servicio en camino a: %s" % c.nombre_bin,
+			Color(0.55, 0.85, 1.0))
+
+
+func _on_contenedor_vaciado(xp: int, c: Node2D) -> void:
+	_aplicar_xp(xp, "contenedor_%s" % c.nombre_bin.to_lower().replace(" ", "_"))
+	EconomiaManager.ganar_creditos(xp / 4)
+	# Contribuye al progreso M3 (Residuos)
+	var delta : float = 0.02 + float(xp) / 1000.0
+	var prev  : float = float(_progreso_modulos.get(3, 0.0))
+	_progreso_modulos[3] = clampf(prev + delta, 0.0, 1.0)
+	_actualizar_sidebar()
+	var msg : String
+	if xp >= 20:
+		msg = "🗑 ¡Contenedor vacío! Servicio excelente  +%d XP" % xp
+	else:
+		msg = "🗑 Contenedor vaciado  +%d XP" % xp
+	_mostrar_notificacion_zona("✓", msg, Color(0.30, 0.90, 0.42))
+	_sfx("xp_bonus" if xp >= 15 else "xp")
 
 
 func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:
