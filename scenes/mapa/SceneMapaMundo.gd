@@ -8,7 +8,7 @@ extends Node2D
 const MAPA_ANCHO : float = 1408.0
 const MAPA_ALTO  : float =  768.0
 const SPAWN_X    : float =  490.0
-const SPAWN_Y    : float =  752.0   # avenida principal frente a Bloque A
+const SPAWN_Y    : float =  762.0   # avenida principal — 10px al sur del tile de BloqueA
 
 const NPC_ESCENA                := preload("res://scenes/mapa/npc_base.tscn")
 const QUIZ_ESCENA               := preload("res://scenes/ui/quiz_npc.tscn")
