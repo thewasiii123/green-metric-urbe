@@ -41,7 +41,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Rector Morales",
 		"mision_id": "mision_rector",
-		"pos":       Vector2(860, 448),   # pasillo BloqueE↔Rectorado (y=420..480)
+		"pos":       Vector2(860, 510),   # frente norte del Rectorado (en ZonaRectorado y=472..672)
 		"color":     Color(0.5, 0.1, 0.9),
 		"dialogos":  PackedStringArray([
 			"Bienvenido, Eco-Ranger. Soy el Rector de URBE.",
@@ -78,7 +78,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Dr. Pérez",
 		"mision_id": "mision_bloque_b",
-		"pos":       Vector2(610, 660),   # pasillo BloqueC/B↔BloqueA, columna B
+		"pos":       Vector2(610, 590),   # dentro de ZonaBloqueB (y=516..644)
 		"color":     Color(0.85, 0.35, 0.0),
 		"dialogos":  PackedStringArray([
 			"Doctor Perez, coordinador de Energia y Cambio Climatico.",
@@ -450,8 +450,10 @@ func _ready() -> void:
 	_mision_ui.mision_aceptada.connect(_on_mision_aceptada)
 	_mision_ui.mision_cancelada.connect(_on_mision_cancelada)
 
-	_dialogo_ui = DIALOGO_ESCENA.instantiate()
-	add_child(_dialogo_ui)
+	# Reusar el nodo DialogoNPC que ya está en la escena para que tanto el
+	# flujo de zona (→ edificio → "Hablar") como el flujo directo de NPC
+	# compartan la misma instancia y la señal dialogo_terminado esté conectada.
+	_dialogo_ui = $DialogoNPC
 	_dialogo_ui.dialogo_terminado.connect(_on_dialogo_terminado)
 
 	_quiz_ui = QUIZ_ESCENA.instantiate()
@@ -628,6 +630,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.keycode != KEY_E:
 		return
+	# Si alguna UI de misión/diálogo/quiz ya está activa, no interferir
 	if (_dialogo_ui and _dialogo_ui.visible) or (_quiz_ui and _quiz_ui.visible):
 		return
 	if _mision_ui and _mision_ui.visible:
@@ -637,15 +640,21 @@ func _input(event: InputEvent) -> void:
 	# E cierra la escena de edificio (funciona como "Salir")
 	if _edificio_ui and _edificio_ui.visible:
 		_on_salida_edificio()
+		get_viewport().set_input_as_handled()
 		return
 	if _panel_contenedor and _panel_contenedor.visible:
 		_cerrar_panel_contenedor()
+		get_viewport().set_input_as_handled()
 		return
 	if _zona_activa != "":
+		# En zona: este nodo toma el evento para mostrar el interior del edificio.
+		# Evita que jugador.gd también dispare npc_cercano.iniciar_dialogo().
 		_mostrar_pantalla_mision()
+		get_viewport().set_input_as_handled()
 	else:
-		if _verificar_contenedor_cercano():
-			return
+		# Sin zona activa: no consumimos el evento; jugador._unhandled_input
+		# puede activar la interacción directa con el NPC si está cerca.
+		_verificar_contenedor_cercano()
 		_verificar_zona_verde_cercana()
 
 
