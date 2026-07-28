@@ -300,7 +300,7 @@ func _input(event: InputEvent) -> void:
 # ── Resolución del drop ───────────────────────────────────────
 func _regresar_al_origen(idx: int) -> void:
 	var card         := _items_nodes[idx] as Panel
-	var origin_global := _panel.global_position + _items_origin[idx]
+	var origin_global : Vector2 = _panel.global_position + (_items_origin[idx] as Vector2)
 	card.z_index = 5
 	var tw := create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tw.tween_property(card, "global_position", origin_global, 0.28)
@@ -344,7 +344,7 @@ func _clasificar_correcto(idx: int, bin_idx: int) -> void:
 func _clasificar_incorrecto(idx: int) -> void:
 	_sfx("error")
 	var card          := _items_nodes[idx] as Panel
-	var origin_global := _panel.global_position + _items_origin[idx]
+	var origin_global : Vector2 = _panel.global_position + (_items_origin[idx] as Vector2)
 	card.z_index = 5
 
 	# Estilo rojo momentáneo
@@ -363,7 +363,7 @@ func _clasificar_incorrecto(idx: int) -> void:
 
 
 func _sacudir_card(card: Panel, idx: int) -> void:
-	var base_x := _items_origin[idx].x
+	var base_x : float = (_items_origin[idx] as Vector2).x
 	var tw := create_tween()
 	for _i in 3:
 		tw.tween_property(card, "position:x", base_x + 7, 0.045)

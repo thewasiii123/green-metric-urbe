@@ -50,7 +50,7 @@ class BinVisual extends Node2D:
 		draw_colored_polygon(PackedVector2Array([
 			Vector2(-18, -4), Vector2(18, -4),
 			Vector2(14,  26), Vector2(-14, 26)
-		]), Color(0.18, 0.72, 0.22, 0.18), false)
+		]), Color(0.18, 0.72, 0.22, 0.18))
 		# Tapa
 		draw_rect(Rect2(-20, -12, 40, 9), Color(0.10, 0.35, 0.13))
 		draw_rect(Rect2(-20, -12, 40, 9), Color(0.22, 0.72, 0.26, 0.55), false, 1.5)
