@@ -29,7 +29,8 @@ const ICONOS_NIVEL : Array[String] = [
 const TOTAL_MISIONES : Dictionary = {
 	1: 8,   # 8 zonas de plantación
 	2: 8,   # 6 LED + 2 paneles solares
-	3: 0, 4: 0, 5: 0, 6: 0
+	3: 6,   # 6 puntos de donación y reciclaje
+	4: 0, 5: 0, 6: 0
 }
 
 const XP_POR_MISION : Dictionary  = {1: 40, 2: 50, 3: 35, 4: 35, 5: 35, 6: 35}

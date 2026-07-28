@@ -29,6 +29,8 @@ const PUNTO_ENERGIA_ESCENA      := preload("res://scenes/misiones/punto_critico_
 const MISION_PLANTAR_ESCENA     := preload("res://scenes/misiones/mision_plantar.gd")
 const INTERIOR_BLOQUE_ESCENA    := preload("res://scenes/misiones/interior_bloque.gd")
 const MISION_SOLAR_ESCENA       := preload("res://scenes/misiones/mision_solar.gd")
+const ZONA_RECICLAJE_ESCENA     := preload("res://scenes/misiones/zona_reciclaje.gd")
+const MISION_RECICLAR_ESCENA    := preload("res://scenes/misiones/mision_reciclar.gd")
 
 # ── Sistema de niveles ───────────────────────────────────────
 const NIVELES : Array = [
@@ -395,6 +397,7 @@ var _edificio_ui      : CanvasLayer = null
 var _plantar_ui       : CanvasLayer = null
 var _interior_ui      : CanvasLayer = null
 var _solar_ui         : CanvasLayer = null
+var _reciclar_ui      : CanvasLayer = null
 var _zonas_verdes        : Array       = []   # Array[Node2D]
 var _panel_zona_mejora   : Panel       = null
 var _pzm_titulo_lbl      : Label       = null
@@ -765,6 +768,11 @@ func _input(event: InputEvent) -> void:
 	if interior_bloque_ui and interior_bloque_ui.visible:
 		return
 
+	# Si hay una misión de reciclaje activa, no capturar el E
+	var reciclar_ui_node := get_tree().get_first_node_in_group("mision_reciclaje")
+	if reciclar_ui_node and reciclar_ui_node.visible:
+		return
+
 	# E cierra la escena de edificio (funciona como "Salir")
 	if _edificio_ui and _edificio_ui.visible:
 		_on_salida_edificio()
@@ -784,6 +792,12 @@ func _input(event: InputEvent) -> void:
 	for pe in get_tree().get_nodes_in_group("punto_energia"):
 		if pe.get("_jugador_cerca"):
 			pe.intentar_interactuar()
+			get_viewport().set_input_as_handled()
+			return
+	# ── Nivel 3: puntos de donación y reciclaje ───────────────────
+	for zr in get_tree().get_nodes_in_group("zona_reciclaje"):
+		if zr.get("_jugador_cerca"):
+			zr.intentar_interactuar()
 			get_viewport().set_input_as_handled()
 			return
 	# ── Sin misión de nivel: contenedores y zonas verdes ─────────
@@ -1936,6 +1950,16 @@ const DATOS_PUNTOS_ENERGIA : Array = [
 ]
 
 
+const DATOS_ZONAS_RECICLAJE : Array = [
+	{"id": "reciclar_corredor_n", "nombre": "Corredor Norte",      "pos": Vector2(420, 330)},
+	{"id": "reciclar_patio_e",    "nombre": "Patio Este",          "pos": Vector2(640, 445)},
+	{"id": "reciclar_bloque_e",   "nombre": "Frente al Bloque E",  "pos": Vector2(620, 200)},
+	{"id": "reciclar_oeste",      "nombre": "Corredor Oeste",      "pos": Vector2(180, 420)},
+	{"id": "reciclar_sur",        "nombre": "Zona Sur Campus",     "pos": Vector2(580, 720)},
+	{"id": "reciclar_este",       "nombre": "Est. a Distancia",    "pos": Vector2(1250, 430)},
+]
+
+
 func _nivel_mgr():
 	return get_node_or_null("/root/NivelManager")
 
@@ -1954,9 +1978,14 @@ func _init_misiones_nivel() -> void:
 	add_child(_solar_ui)
 	_solar_ui.mision_solar_completada.connect(_on_solar_completado)
 
+	_reciclar_ui = MISION_RECICLAR_ESCENA.new()
+	add_child(_reciclar_ui)
+	_reciclar_ui.mision_reciclaje_completada.connect(_on_reciclaje_completado)
+
 	# ── Spawns en mapa ───────────────────────────────────────
 	_spawn_zonas_tierra()
 	_spawn_puntos_energia()
+	_spawn_zonas_reciclaje()
 
 	# ── Señales de NivelManager ──────────────────────────────
 	var nm = _nivel_mgr()
@@ -1998,12 +2027,33 @@ func _spawn_puntos_energia() -> void:
 		pe.energia_solicitada.connect(_on_energia_solicitada)
 
 
+func _spawn_zonas_reciclaje() -> void:
+	var nm = _nivel_mgr()
+	if not nm or not nm.nivel_desbloqueado(3):
+		return
+	for dato : Dictionary in DATOS_ZONAS_RECICLAJE:
+		var zr := ZONA_RECICLAJE_ESCENA.new()
+		zr.set("mision_id",   dato["id"])
+		zr.set("nombre_zona", dato["nombre"])
+		zr.position = dato["pos"]
+		zr.z_index  = 1
+		add_child(zr)
+		zr.reciclar_solicitado.connect(_on_reciclar_solicitado)
+
+
 # ── Callbacks de interacción ──────────────────────────────────
 
 func _on_plantar_solicitado(zona: Area2D) -> void:
 	if not is_instance_valid(_plantar_ui): return
 	var indice : int = zona.get("indice_mision")
 	_plantar_ui.call("iniciar", indice, zona)
+
+
+func _on_reciclar_solicitado(zona: Area2D) -> void:
+	if not is_instance_valid(_reciclar_ui): return
+	var mision_id   : String = zona.get("mision_id")
+	var zona_nombre : String = zona.get("nombre_zona")
+	_reciclar_ui.call("iniciar", mision_id, zona_nombre, zona)
 
 
 func _on_energia_solicitada(punto: Area2D) -> void:
@@ -2044,6 +2094,19 @@ func _on_interior_completado(mision_id: String, xp: int, ec: int) -> void:
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("⚡ LED completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
+func _on_reciclaje_completado(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(3) if nm else 0.0
+	_progreso_modulos[3] = pct
+	_actualizar_sidebar()
+	SupabaseManager.guardar_progreso(3, xp, int(pct * 100), nm.nivel_completo(3) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("♻ Reciclaje completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
 
 
 func _on_solar_completado(mision_id: String, xp: int, ec: int) -> void:
