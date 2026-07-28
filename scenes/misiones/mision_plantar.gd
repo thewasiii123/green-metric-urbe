@@ -70,6 +70,106 @@ const MISIONES : Array = [
 			"eucalipto":        "❌ El eucalipto libera compuestos alelopáticos que inhiben el crecimiento de otras plantas. Además es invasivo y consume grandes cantidades de agua subterránea.",
 		},
 	},
+	{
+		"id":       "plantar_norte",
+		"zona":     "Camino Norte del Campus",
+		"icono":    "🌳",
+		"contexto": "El camino norte es la entrada principal al campus. Necesita vegetación que dé bienvenida y sombra a los estudiantes.",
+		"criterio": "Árbol de copa amplia, nativo de la región y con valor representativo.",
+		"correcta": "araguaney",
+		"plantas":  [
+			{"id": "araguaney",       "nombre": "Araguaney",         "desc": "Árbol Nacional · Sombra amplia · Raíces no invasivas"},
+			{"id": "eucalipto",       "nombre": "Eucalipto",          "desc": "Especie invasiva · Raíces agresivas"},
+			{"id": "bambu",           "nombre": "Bambú",              "desc": "Invasivo · No apropiado para entradas"},
+			{"id": "pino_canadiense", "nombre": "Pino Canadiense",    "desc": "Especie foránea · Clima frío"},
+		],
+		"feedback": {
+			"araguaney":       "✅ El Araguaney es la elección perfecta. Su floración amarilla representa la identidad venezolana y su copa proporciona sombra ideal para la entrada del campus.",
+			"eucalipto":       "❌ El eucalipto es invasivo y consume grandes cantidades de agua subterránea. Sus raíces agresivas dañan aceras e infraestructura.",
+			"bambu":           "❌ El bambú crece de forma descontrolada y no proyecta la imagen representativa que necesita la entrada del campus.",
+			"pino_canadiense": "❌ El pino canadiense no se adapta al clima tropical de Maracaibo ni representa la flora local.",
+		},
+	},
+	{
+		"id":       "plantar_cafetín",
+		"zona":     "Zona Norte — Cafetín URBE",
+		"icono":    "🌺",
+		"contexto": "El área frente al cafetín universitario es frecuentada por estudiantes en horario de comidas.\nNecesita plantas ornamentales que mejoren el ambiente sin obstruir el paso.",
+		"criterio": "Plantas tropicales ornamentales de bajo mantenimiento y alta resistencia al sol.",
+		"correcta": "buganvilia",
+		"plantas":  [
+			{"id": "buganvilia",  "nombre": "Buganvilia (Veranera)", "desc": "Tropical · Ornamental · Resistente al sol"},
+			{"id": "cactus",      "nombre": "Cactus",                "desc": "Sin valor ornamental · Riesgo por espinas"},
+			{"id": "bambu",       "nombre": "Bambú",                 "desc": "Invasivo · Obstruye el paso"},
+			{"id": "eucalipto",   "nombre": "Eucalipto",             "desc": "Invasivo · Libera toxinas al suelo"},
+		],
+		"feedback": {
+			"buganvilia": "✅ La Buganvilia resiste el sol directo, florece con colores vivos todo el año y no requiere mucho riego. Perfecta para esta zona de paso frecuente.",
+			"cactus":     "❌ El cactus no es apropiado para zonas de tránsito estudiantil. Sus espinas representan un riesgo y su valor ornamental es limitado.",
+			"bambu":      "❌ El bambú se propaga invasivamente y puede bloquear el paso frente al cafetín. No es adecuado para esta zona.",
+			"eucalipto":  "❌ El eucalipto libera compuestos que inhiben el crecimiento de otras plantas y puede afectar la calidad del aire cerca del cafetín.",
+		},
+	},
+	{
+		"id":       "plantar_este",
+		"zona":     "Corredor Norte-Este",
+		"icono":    "🌿",
+		"contexto": "El corredor noreste conecta el Bloque E con los Estudios a Distancia.\nEs una zona de tránsito constante que necesita vegetación fresca y de bajo mantenimiento.",
+		"criterio": "Vegetación nativa de bajo mantenimiento que reduzca la temperatura del corredor.",
+		"correcta": "helecho_tropical",
+		"plantas":  [
+			{"id": "helecho_tropical","nombre": "Helecho Tropical + Pasto","desc": "Bajo mantenimiento · Refresca · Nativo"},
+			{"id": "rosa_inglesa",    "nombre": "Rosa Inglesa",            "desc": "Alto mantenimiento · Requiere pesticidas"},
+			{"id": "cactus",          "nombre": "Cactus",                  "desc": "Desértico · Sin sombra ni frescor"},
+			{"id": "bambu",           "nombre": "Bambú Invasivo",          "desc": "Se expande sin control · Daña infraestructura"},
+		],
+		"feedback": {
+			"helecho_tropical": "✅ El helecho tropical con pasto crea un suelo verde fresco de bajo mantenimiento. Ideal para reducir la temperatura en corredores de tránsito intenso.",
+			"rosa_inglesa":      "❌ La rosa inglesa requiere pesticidas y riego frecuente. Es incompatible con los principios de sostenibilidad del campus.",
+			"cactus":            "❌ El cactus no contribuye a refrescar el corredor ni ofrece sombra. No es adecuado para zonas de tránsito estudiantil.",
+			"bambu":             "❌ El bambú invasivo se expande sin control y puede dañar la infraestructura del corredor. Su mantenimiento es costoso y frecuente.",
+		},
+	},
+	{
+		"id":       "plantar_sur",
+		"zona":     "Zona Sur del Campus",
+		"icono":    "🌳",
+		"contexto": "La zona sur del campus recibe alta insolación todo el día. Estudiantes y docentes necesitan sombra durante el recorrido entre bloques.",
+		"criterio": "Árbol de crecimiento rápido, copa amplia, resistente al calor de Maracaibo.",
+		"correcta": "araguaney",
+		"plantas":  [
+			{"id": "araguaney",       "nombre": "Araguaney",         "desc": "Copa amplia · Resistente al calor · Nativo"},
+			{"id": "pino_canadiense", "nombre": "Pino Canadiense",   "desc": "No se adapta al trópico · Clima frío"},
+			{"id": "eucalipto",       "nombre": "Eucalipto",          "desc": "Especie invasiva · Perjudicial para otras plantas"},
+			{"id": "rosa_inglesa",    "nombre": "Rosa Inglesa",       "desc": "Sin sombra · Alto mantenimiento"},
+		],
+		"feedback": {
+			"araguaney":       "✅ El Araguaney ofrece sombra amplia y resiste el intenso calor maracaibero. Su floración amarilla también mejora la estética del campus.",
+			"pino_canadiense": "❌ El pino canadiense no tolera el calor tropical de Maracaibo. Su forma cónica no proporciona suficiente sombra lateral.",
+			"eucalipto":       "❌ El eucalipto es invasivo y sus raíces pueden dañar la infraestructura. Su alelopatía afecta a las plantas cercanas.",
+			"rosa_inglesa":    "❌ La rosa inglesa no proporciona sombra suficiente y requiere cuidados intensivos que contradicen los principios de sostenibilidad.",
+		},
+	},
+	{
+		"id":       "plantar_oeste",
+		"zona":     "Corredor Oeste Sur",
+		"icono":    "🌺",
+		"contexto": "El corredor oeste sur está junto al estacionamiento. Necesita plantas que actúen como barrera verde y mejoren la calidad del aire.",
+		"criterio": "Plantas que filtren gases vehiculares y actúen como barrera visual natural.",
+		"correcta": "buganvilia",
+		"plantas":  [
+			{"id": "buganvilia",     "nombre": "Buganvilia (Veranera)", "desc": "Resistente · Filtra el aire · Ornamental"},
+			{"id": "eucalipto",      "nombre": "Eucalipto",             "desc": "Invasivo · Consume mucha agua"},
+			{"id": "cactus",         "nombre": "Cactus",                "desc": "No filtra gases · Sin barrera visual"},
+			{"id": "pino_canadiense","nombre": "Pino Canadiense",       "desc": "No se adapta al clima tropical"},
+		],
+		"feedback": {
+			"buganvilia":     "✅ La Buganvilia forma una barrera verde densa y colorida. Resiste los gases vehiculares y mejora la estética del área junto al estacionamiento.",
+			"eucalipto":      "❌ Aunque crece rápido, el eucalipto es invasivo y puede dañar la infraestructura del estacionamiento con sus raíces agresivas.",
+			"cactus":         "❌ El cactus no forma una barrera visual efectiva ni filtra gases vehiculares. No es apropiado para esta zona de tránsito.",
+			"pino_canadiense":"❌ El pino canadiense no se adapta al clima tropical de Maracaibo y no puede sobrevivir a las altas temperaturas de la región.",
+		},
+	},
 ]
 
 # ── Constantes visuales ──────────────────────────────────────
@@ -78,13 +178,34 @@ const PANEL_H   : float = 620.0
 const CARTA_W   : float = 195.0
 const CARTA_H   : float = 210.0
 
+# ── Constantes de la fase de plantación ──────────────────────
+const PASO_CLICKS  : Array[int]    = [6, 1, 8]
+const PASO_TITULOS : Array[String] = [
+	"Paso 1/3 — 🪓  Abrir el hueco",
+	"Paso 2/3 — 🌿  Colocar el árbol",
+	"Paso 3/3 — 💧  Regar el árbol",
+]
+const PASO_DESCS : Array[String] = [
+	"Haz clic repetidamente para cavar la tierra",
+	"Haz clic para colocar el árbol en el hueco",
+	"Haz clic repetidamente para regar y ver crecer el árbol",
+]
+const PASO_BTNS : Array[String] = [
+	"  🪓  ¡Cavar!  ",
+	"  🌿  ¡Plantar!  ",
+	"  💧  ¡Regar!  ",
+]
+
 # ── Estado ───────────────────────────────────────────────────
 var _mision_idx     : int    = 0
 var _mision_id      : String = ""
 var _seleccion_ok   : bool   = false
-var _zona_ref       : Area2D = null   # zona_tierra que disparó esta misión
+var _zona_ref       : Area2D = null
+var _planta_elegida : String = ""
+var _paso_actual    : int    = 0
+var _paso_progreso  : int    = 0
 
-# ── Nodos UI ─────────────────────────────────────────────────
+# ── Nodos UI — fase 1 (selección) ────────────────────────────
 var _panel_root     : Panel         = null
 var _zona_lbl       : Label         = null
 var _contexto_lbl   : Label         = null
@@ -98,6 +219,14 @@ var _fb_desc        : Label         = null
 var _fb_btn         : Button        = null
 var _pct_lbl        : Label         = null
 var _nivel_badge    : Label         = null
+
+# ── Nodos UI — fase 2 (plantación interactiva) ────────────────
+var _plant_panel      : Panel      = null
+var _plant_title_lbl  : Label      = null
+var _plant_visual_node: Node2D     = null
+var _paso_desc_lbl    : Label      = null
+var _prog_bar         : ProgressBar = null
+var _plant_btn        : Button     = null
 
 # ── Inner class: ilustración de planta ───────────────────────
 class PlantaVisual extends Node2D:
@@ -345,24 +474,154 @@ class SueloVisual extends Node2D:
 			var ga := 0.12 + 0.08 * sin(_t * 2.0)
 			draw_circle(Vector2(0, -20), 30.0, Color(0.20, 0.80, 0.25, ga))
 
+# ── Inner class: mini-juego de plantación ────────────────────
+class PlantacionVisual extends Node2D:
+	var paso        : int    = 0
+	var progreso    : float  = 0.0
+	var tipo_planta : String = ""
+	var _t          : float  = 0.0
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		_dibujar_suelo()
+		match paso:
+			0: _cavar()
+			1: _plantar()
+			2: _regar()
+
+	func _dibujar_suelo() -> void:
+		var pts := PackedVector2Array()
+		for i in 40:
+			var a := float(i) / 40.0 * TAU
+			pts.append(Vector2(cos(a) * 120.0, sin(a) * 46.0))
+		draw_colored_polygon(pts, Color(0.38, 0.22, 0.08))
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 88
+		for _i in 28:
+			var px := rng.randf_range(-108.0, 108.0)
+			var py := rng.randf_range(-38.0, 38.0)
+			draw_circle(Vector2(px, py), rng.randf_range(2.0, 5.5),
+						Color(0.25, 0.13, 0.05, 0.55))
+		draw_arc(Vector2.ZERO, 118.0, 0.0, TAU, 40, Color(0.22, 0.55, 0.14, 0.4), 6.0)
+
+	func _cavar() -> void:
+		var hole_r := progreso * 34.0
+		if hole_r > 2.0:
+			draw_circle(Vector2.ZERO, hole_r, Color(0.15, 0.08, 0.02))
+			draw_arc(Vector2.ZERO, hole_r, 0.0, TAU, 24,
+					 Color(0.50, 0.82, 0.22, 0.55), 2.5)
+		for i in int(progreso * 7):
+			var ai := float(i) / 7.0 * PI + _t * 1.4 + float(i) * 0.5
+			var di := (32.0 + float(i) * 10.0) * progreso
+			var p  := Vector2(cos(ai) * di, -44.0 - absf(sin(ai)) * di * 0.5)
+			var al := maxf(0.0, 0.85 - progreso * 0.4 - float(i) * 0.06)
+			if al > 0.05:
+				draw_circle(p, 4.5, Color(0.38, 0.22, 0.08, al))
+		var sx := -55.0 + sin(_t * (2.5 + progreso * 2.0)) * 14.0
+		var sy := -110.0
+		draw_line(Vector2(sx, sy), Vector2(sx + 9.0, sy + 72.0),
+				  Color(0.55, 0.38, 0.18), 5.0)
+		draw_rect(Rect2(sx + 3.0, sy + 68.0, 14.0, 20.0), Color(0.62, 0.65, 0.68))
+		draw_rect(Rect2(sx - 2.0, sy - 8.0,  16.0,  9.0), Color(0.40, 0.25, 0.12))
+
+	func _plantar() -> void:
+		draw_circle(Vector2.ZERO, 33.0, Color(0.15, 0.08, 0.02))
+		draw_arc(Vector2.ZERO, 33.0, 0.0, TAU, 24,
+				 Color(0.50, 0.82, 0.22, 0.55), 2.5)
+		var ty := -155.0 + progreso * 120.0
+		_arbol(Vector2(0.0, ty), tipo_planta, 1.0)
+
+	func _regar() -> void:
+		draw_circle(Vector2.ZERO, 33.0, Color(0.15, 0.08, 0.02))
+		var sc := 0.55 + progreso * 0.45
+		_arbol(Vector2(0.0, -22.0 * sc), tipo_planta, sc)
+		var cx := 140.0
+		var cy := -90.0 + sin(_t * 0.9) * 8.0
+		var body := PackedVector2Array([
+			Vector2(cx - 30.0, cy - 12.0), Vector2(cx + 10.0, cy - 12.0),
+			Vector2(cx + 10.0, cy + 16.0), Vector2(cx - 30.0, cy + 16.0)
+		])
+		draw_colored_polygon(body, Color(0.28, 0.62, 0.85))
+		draw_line(Vector2(cx - 30.0, cy + 2.0), Vector2(cx - 56.0, cy + 24.0),
+				  Color(0.22, 0.52, 0.78), 6.0)
+		draw_arc(Vector2(cx + 10.0, cy + 4.0), 14.0, -PI * 0.5, PI * 0.5,
+				 12, Color(0.22, 0.52, 0.78), 5.0)
+		for i in 10:
+			var dt  := fmod(_t * 1.8 + float(i) * 0.22, 1.0)
+			var dxi := cx - 22.0 - float(i % 5) * 10.0
+			var dyi := cy + 24.0 + dt * 90.0
+			var al2 := (1.0 - dt) * progreso
+			if al2 > 0.05:
+				draw_circle(Vector2(dxi, dyi), 3.0, Color(0.30, 0.70, 0.95, al2))
+		if progreso > 0.72:
+			for i in 8:
+				var ai := float(i) / 8.0 * TAU + _t * 0.9
+				var ri := 72.0 + sin(_t * 2.0 + float(i)) * 10.0
+				var pi := Vector2(cos(ai) * ri, sin(ai) * ri * 0.55 - 30.0)
+				draw_circle(pi, 5.0, Color(1.0, 0.95, 0.20, (progreso - 0.72) / 0.28))
+
+	func _arbol(pos: Vector2, tipo: String, sc: float) -> void:
+		draw_rect(Rect2(pos.x - 4.0*sc, pos.y, 8.0*sc, 28.0*sc),
+				  Color(0.40, 0.25, 0.10))
+		match tipo:
+			"araguaney":
+				draw_circle(Vector2(pos.x, pos.y - 20.0*sc), 28.0*sc,
+							Color(0.90, 0.72, 0.05))
+				draw_circle(Vector2(pos.x - 14.0*sc, pos.y - 10.0*sc), 18.0*sc,
+							Color(0.92, 0.76, 0.06))
+				draw_circle(Vector2(pos.x + 14.0*sc, pos.y - 10.0*sc), 18.0*sc,
+							Color(0.92, 0.76, 0.06))
+			"buganvilia":
+				draw_circle(Vector2(pos.x, pos.y - 20.0*sc), 24.0*sc,
+							Color(0.22, 0.58, 0.18, 0.8))
+				for j in 6:
+					var a := float(j) / 6.0 * TAU + _t * 0.4
+					draw_circle(
+						Vector2(pos.x + cos(a)*20.0*sc, pos.y - 20.0*sc + sin(a)*12.0*sc),
+						7.0*sc, Color(0.88, 0.20, 0.62))
+			"helecho_tropical":
+				draw_circle(Vector2(pos.x, pos.y - 16.0*sc), 30.0*sc,
+							Color(0.22, 0.62, 0.22, 0.85))
+				draw_circle(Vector2(pos.x - 18.0*sc, pos.y - 6.0*sc), 18.0*sc,
+							Color(0.25, 0.68, 0.25, 0.80))
+				draw_circle(Vector2(pos.x + 18.0*sc, pos.y - 6.0*sc), 18.0*sc,
+							Color(0.25, 0.68, 0.25, 0.80))
+			_:
+				draw_circle(Vector2(pos.x, pos.y - 20.0*sc), 26.0*sc,
+							Color(0.18, 0.65, 0.20))
+				draw_circle(Vector2(pos.x - 14.0*sc, pos.y - 10.0*sc), 17.0*sc,
+							Color(0.20, 0.68, 0.20))
+				draw_circle(Vector2(pos.x + 14.0*sc, pos.y - 10.0*sc), 17.0*sc,
+							Color(0.20, 0.68, 0.20))
+
+
 # ── _ready ────────────────────────────────────────────────────
 func _ready() -> void:
 	layer = 20
 	add_to_group("mision_plantar")
 	_crear_ui()
+	_crear_panel_plantacion()
 	hide()
 
 
 func iniciar(indice: int, zona_node: Area2D) -> void:
-	_mision_idx   = clampi(indice, 0, MISIONES.size() - 1)
-	_zona_ref     = zona_node
-	_seleccion_ok = false
+	_mision_idx     = clampi(indice, 0, MISIONES.size() - 1)
+	_zona_ref       = zona_node
+	_seleccion_ok   = false
+	_planta_elegida = ""
+	_paso_actual    = 0
+	_paso_progreso  = 0
 	_feedback_panel.visible = false
+	if is_instance_valid(_plant_panel):
+		_plant_panel.visible = false
+	_panel_root.visible = true
 	for c in _cartas:
 		_resetear_carta(c)
 	_poblar_datos()
 	show()
-	# Hint contextual
 	var hb = get_tree().get_first_node_in_group("hint_bubble")
 	if hb:
 		hb.push("primer_plantar",
@@ -383,7 +642,8 @@ func _poblar_datos() -> void:
 	var pct : float = nm.pct_nivel(1) if nm else 0.0
 	_pct_lbl.text = "NIVEL 1  ·  %.0f%% completado" % (pct * 100.0)
 
-	var plantas : Array = m["plantas"]
+	var plantas : Array = m["plantas"].duplicate()
+	plantas.shuffle()
 	for i in _cartas.size():
 		var carta : Panel = _cartas[i]
 		if i >= plantas.size(): continue
@@ -649,11 +909,10 @@ func _procesar_seleccion(carta: Panel) -> void:
 	var feedback_txt : String = m["feedback"].get(pid, "Respuesta no reconocida.")
 
 	if es_ok:
-		_seleccion_ok = true
+		_seleccion_ok   = true
+		_planta_elegida = pid
 		_animar_carta_ok(carta)
-		(_suelo_node as SueloVisual).plantada = true
 		_mostrar_feedback(true, "¡Planta correcta!", feedback_txt)
-		_completar_mision()
 	else:
 		_animar_carta_mal(carta)
 		_mostrar_feedback(false, "Planta incorrecta", feedback_txt)
@@ -746,13 +1005,288 @@ func _crear_panel_feedback() -> void:
 	fvbox.add_child(_fb_btn)
 
 
+func _crear_panel_plantacion() -> void:
+	_plant_panel = Panel.new()
+	_plant_panel.custom_minimum_size = Vector2(720, 530)
+	_plant_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_plant_panel.offset_left   = -360.0
+	_plant_panel.offset_top    = -265.0
+	_plant_panel.offset_right  =  360.0
+	_plant_panel.offset_bottom =  265.0
+	_plant_panel.visible = false
+	var pp_st := StyleBoxFlat.new()
+	pp_st.bg_color     = Color(0.04, 0.08, 0.06, 0.98)
+	pp_st.border_color = Color(0.20, 0.80, 0.25)
+	pp_st.set_border_width_all(3)
+	pp_st.set_corner_radius_all(18)
+	pp_st.shadow_color = Color(0.10, 0.55, 0.18, 0.55)
+	pp_st.shadow_size  = 28
+	_plant_panel.add_theme_stylebox_override("panel", pp_st)
+	add_child(_plant_panel)
+
+	var vb := VBoxContainer.new()
+	vb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vb.offset_left   =  22.0
+	vb.offset_top    =  18.0
+	vb.offset_right  = -22.0
+	vb.offset_bottom = -18.0
+	vb.add_theme_constant_override("separation", 10)
+	_plant_panel.add_child(vb)
+
+	var header2 := HBoxContainer.new()
+	header2.add_theme_constant_override("separation", 10)
+	vb.add_child(header2)
+
+	var btn_salir2 := Button.new()
+	btn_salir2.text = "← Salir"
+	btn_salir2.custom_minimum_size = Vector2(80, 32)
+	btn_salir2.add_theme_font_size_override("font_size", 12)
+	var bs2 := StyleBoxFlat.new()
+	bs2.bg_color     = Color(0.18, 0.06, 0.06, 0.90)
+	bs2.border_color = Color(0.65, 0.15, 0.15)
+	bs2.set_border_width_all(2)
+	bs2.set_corner_radius_all(8)
+	btn_salir2.add_theme_stylebox_override("normal", bs2)
+	btn_salir2.add_theme_color_override("font_color", Color(0.95, 0.55, 0.55))
+	btn_salir2.pressed.connect(_on_salir)
+	header2.add_child(btn_salir2)
+
+	_plant_title_lbl = Label.new()
+	_plant_title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_plant_title_lbl.horizontal_alignment  = HORIZONTAL_ALIGNMENT_CENTER
+	_plant_title_lbl.add_theme_font_size_override("font_size", 20)
+	_plant_title_lbl.add_theme_color_override("font_color", Color(0.30, 1.00, 0.40))
+	header2.add_child(_plant_title_lbl)
+
+	var vis_cont := Control.new()
+	vis_cont.custom_minimum_size   = Vector2(0, 270)
+	vis_cont.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vis_cont.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	vis_cont.clip_contents         = true
+	vb.add_child(vis_cont)
+
+	_plant_visual_node = PlantacionVisual.new()
+	_plant_visual_node.position = Vector2(338, 200)
+	vis_cont.add_child(_plant_visual_node)
+
+	_paso_desc_lbl = Label.new()
+	_paso_desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_paso_desc_lbl.add_theme_font_size_override("font_size", 14)
+	_paso_desc_lbl.add_theme_color_override("font_color", Color(0.80, 0.92, 0.80))
+	vb.add_child(_paso_desc_lbl)
+
+	_prog_bar = ProgressBar.new()
+	_prog_bar.custom_minimum_size   = Vector2(0, 24)
+	_prog_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_prog_bar.min_value             = 0.0
+	_prog_bar.max_value             = 1.0
+	_prog_bar.value                 = 0.0
+	_prog_bar.show_percentage       = false
+	vb.add_child(_prog_bar)
+
+	_plant_btn = Button.new()
+	_plant_btn.custom_minimum_size = Vector2(220, 52)
+	_plant_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_plant_btn.add_theme_font_size_override("font_size", 18)
+	var pb_st := StyleBoxFlat.new()
+	pb_st.bg_color     = Color(0.06, 0.34, 0.08)
+	pb_st.border_color = Color(0.22, 0.84, 0.22)
+	pb_st.set_border_width_all(2)
+	pb_st.set_corner_radius_all(14)
+	_plant_btn.add_theme_stylebox_override("normal", pb_st)
+	_plant_btn.add_theme_color_override("font_color", Color(0.88, 1.0, 0.88))
+	_plant_btn.pressed.connect(_on_plantar_btn)
+	vb.add_child(_plant_btn)
+
+
+func _iniciar_plantacion() -> void:
+	_paso_actual   = 0
+	_paso_progreso = 0
+	if is_instance_valid(_plant_visual_node):
+		var pv := _plant_visual_node as PlantacionVisual
+		pv.paso        = 0
+		pv.progreso    = 0.0
+		pv.tipo_planta = _planta_elegida
+	if is_instance_valid(_plant_btn):
+		_plant_btn.disabled = false
+	_actualizar_paso_ui()
+	_panel_root.visible  = false
+	_plant_panel.visible = true
+	_plant_panel.modulate.a = 0.0
+	var tw := create_tween()
+	tw.tween_property(_plant_panel, "modulate:a", 1.0, 0.25)
+
+
+func _actualizar_paso_ui() -> void:
+	_plant_title_lbl.text = PASO_TITULOS[_paso_actual]
+	_paso_desc_lbl.text   = PASO_DESCS[_paso_actual]
+	_plant_btn.text       = PASO_BTNS[_paso_actual]
+	_prog_bar.max_value   = float(PASO_CLICKS[_paso_actual])
+	_prog_bar.value       = 0.0
+
+
+func _on_plantar_btn() -> void:
+	_paso_progreso += 1
+	if is_instance_valid(_plant_visual_node):
+		(_plant_visual_node as PlantacionVisual).progreso = \
+			float(_paso_progreso) / float(PASO_CLICKS[_paso_actual])
+	_prog_bar.value = float(_paso_progreso)
+	if _paso_progreso >= PASO_CLICKS[_paso_actual]:
+		_avanzar_paso()
+
+
+func _avanzar_paso() -> void:
+	_paso_actual   += 1
+	_paso_progreso  = 0
+	if _paso_actual >= PASO_CLICKS.size():
+		_completar_plantacion()
+		return
+	if is_instance_valid(_plant_visual_node):
+		var pv := _plant_visual_node as PlantacionVisual
+		pv.paso     = _paso_actual
+		pv.progreso = 0.0
+	_actualizar_paso_ui()
+
+
+func _completar_plantacion() -> void:
+	if is_instance_valid(_plant_visual_node):
+		(_plant_visual_node as PlantacionVisual).progreso = 1.0
+	if is_instance_valid(_plant_btn):
+		_plant_btn.disabled = true
+	_plant_title_lbl.text = "🎉 ¡Árbol plantado con éxito!"
+	_paso_desc_lbl.text   = "¡El árbol quedó plantado en el campus URBE!"
+	var tw := create_tween()
+	tw.tween_interval(1.2)
+	tw.tween_callback(_mostrar_panel_metricas_planta)
+
+
+func _mostrar_panel_metricas_planta() -> void:
+	var nm   = _nivel_mgr()
+	var xp   : int    = int(nm.XP_POR_MISION.get(1, 40)) if nm else 40
+	var ec   : int    = int(nm.EC_POR_MISION.get(1, 15)) if nm else 15
+	var m    : Dictionary = MISIONES[_mision_idx]
+	var zona : String = m["zona"]
+	var tipo : String = _planta_elegida
+
+	var detalle : String
+	match tipo:
+		"araguaney":
+			detalle = "🌡  Copa amplia → −2 °C en la zona\n" \
+				+ "🐝  Flores amarillas → atrae polinizadores nativos\n" \
+				+ "🏛  Árbol Nacional de Venezuela — identidad y cultura"
+		"buganvilia":
+			detalle = "💨  Barrera verde densa → filtra partículas del aire\n" \
+				+ "🌸  Floración continua → fomenta biodiversidad local\n" \
+				+ "💧  Bajo consumo hídrico — resistente a sequías"
+		"helecho_tropical":
+			detalle = "💧  Cobertura del suelo → mejora el drenaje\n" \
+				+ "🌬  Evapotranspiración natural → refresca el aire\n" \
+				+ "🌿  Hábitat para insectos y microorganismos del suelo"
+		_:
+			detalle = "🌿  Vegetación nativa adaptada al clima tropical\n" \
+				+ "💧  Retención hídrica y mejora del suelo\n" \
+				+ "🐝  Fomenta la biodiversidad del campus"
+
+	var met := Panel.new()
+	met.set_anchors_preset(Control.PRESET_CENTER)
+	met.custom_minimum_size = Vector2(520, 390)
+	met.offset_left  = -260.0; met.offset_top    = -195.0
+	met.offset_right =  260.0; met.offset_bottom =  195.0
+	var mps := StyleBoxFlat.new()
+	mps.bg_color     = Color(0.04, 0.08, 0.06, 0.99)
+	mps.border_color = Color(0.22, 0.90, 0.28)
+	mps.set_border_width_all(3)
+	mps.set_corner_radius_all(16)
+	mps.shadow_color = Color(0.10, 0.55, 0.18, 0.55)
+	mps.shadow_size  = 24
+	met.add_theme_stylebox_override("panel", mps)
+	add_child(met)
+
+	var vb := VBoxContainer.new()
+	vb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vb.offset_left = 20; vb.offset_top = 16
+	vb.offset_right = -20; vb.offset_bottom = -16
+	vb.add_theme_constant_override("separation", 9)
+	met.add_child(vb)
+
+	var tit := Label.new()
+	tit.text = "🌳 ¡Árbol plantado!\n%s — %s" % [m["icono"], zona]
+	tit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tit.add_theme_font_size_override("font_size", 15)
+	tit.add_theme_color_override("font_color", Color(0.30, 1.00, 0.40))
+	tit.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vb.add_child(tit)
+
+	var sep1 := HSeparator.new()
+	sep1.add_theme_color_override("color", Color(0.22, 0.88, 0.30, 0.4))
+	vb.add_child(sep1)
+
+	var sub := Label.new()
+	sub.text = "🏆  Impacto en las métricas GreenMetric URBE"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", 12)
+	sub.add_theme_color_override("font_color", Color(0.55, 1.0, 0.55))
+	vb.add_child(sub)
+
+	var met_lbl := Label.new()
+	met_lbl.text = (
+		"🏛  Infraestructura y Configuración\n"
+		+ "   • Espacio verde activo en el campus\n"
+		+ "   • Vegetación nativa adaptada al trópico\n\n"
+		+ "⚡  Energía y Cambio Climático\n"
+		+ "   • Absorción de CO₂: ~12 kg/año\n"
+		+ "   • Reducción térmica: ↓ 1.5 °C en el área\n\n"
+		+ "💧  Agua\n"
+		+ "   • Mejora el drenaje y la retención hídrica del suelo\n\n"
+		+ "🌿  Detalle — %s\n%s" % [tipo.replace("_", " ").capitalize(), detalle]
+	)
+	met_lbl.autowrap_mode       = TextServer.AUTOWRAP_WORD
+	met_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	met_lbl.add_theme_font_size_override("font_size", 11)
+	met_lbl.add_theme_color_override("font_color", Color(0.80, 0.92, 0.80))
+	vb.add_child(met_lbl)
+
+	var sep2 := HSeparator.new()
+	sep2.add_theme_color_override("color", Color(0.22, 0.88, 0.30, 0.3))
+	vb.add_child(sep2)
+
+	var recomp := Label.new()
+	recomp.text = "+%d XP   ·   +%d EcoCredits" % [xp, ec]
+	recomp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	recomp.add_theme_font_size_override("font_size", 14)
+	recomp.add_theme_color_override("font_color", Color(0.55, 1.0, 0.55))
+	vb.add_child(recomp)
+
+	var btn := Button.new()
+	btn.text = "  ¡Genial!  ✓  "
+	btn.custom_minimum_size   = Vector2(180, 44)
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.add_theme_font_size_override("font_size", 14)
+	var bst := StyleBoxFlat.new()
+	bst.bg_color = Color(0.06, 0.30, 0.08); bst.border_color = Color(0.22, 0.84, 0.22)
+	bst.set_border_width_all(2); bst.set_corner_radius_all(12)
+	btn.add_theme_stylebox_override("normal", bst)
+	btn.add_theme_color_override("font_color", Color(0.88, 1.0, 0.88))
+	btn.pressed.connect(func():
+		met.queue_free()
+		_completar_mision()
+		_plant_panel.visible = false
+		hide()
+	)
+	vb.add_child(btn)
+
+	met.modulate.a = 0.0
+	var tw := create_tween()
+	tw.tween_property(met, "modulate:a", 1.0, 0.25)
+
+
 func _mostrar_feedback(correcto: bool, titulo: String, desc: String) -> void:
 	_fb_icono.text  = "🌱" if correcto else "❌"
 	_fb_titulo.text = titulo
 	_fb_titulo.add_theme_color_override("font_color",
 		Color(0.30, 0.95, 0.35) if correcto else Color(0.95, 0.35, 0.30))
 	_fb_desc.text   = desc
-	_fb_btn.text    = "  ¡Completado!  🎉  " if correcto else "  Intentar de nuevo  "
+	_fb_btn.text    = "  ¡A plantar! 🌱  " if correcto else "  Intentar de nuevo  "
 
 	_feedback_panel.modulate.a = 0.0
 	_feedback_panel.visible    = true
@@ -765,7 +1299,7 @@ func _mostrar_feedback(correcto: bool, titulo: String, desc: String) -> void:
 func _on_feedback_continuar() -> void:
 	_feedback_panel.visible = false
 	if _seleccion_ok:
-		_cerrar()
+		_iniciar_plantacion()
 
 
 func _nivel_mgr():
@@ -788,6 +1322,10 @@ func _on_salir() -> void:
 
 
 func _cerrar() -> void:
+	if is_instance_valid(_plant_panel) and _plant_panel.visible:
+		_plant_panel.visible = false
+		hide()
+		return
 	var tw := create_tween()
 	tw.tween_property(_panel_root, "modulate:a", 0.0, 0.18)
 	tw.tween_callback(func(): hide(); _panel_root.modulate.a = 1.0)

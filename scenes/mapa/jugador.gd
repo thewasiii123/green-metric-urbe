@@ -35,12 +35,14 @@ func _physics_process(delta: float) -> void:
 	var minijuego_ui = get_tree().get_first_node_in_group("ui_minijuego")
 	var tutorial_ui  = get_tree().get_first_node_in_group("ui_tutorial")
 	var crisis_ui    = get_tree().get_first_node_in_group("ui_crisis")
+	var interior_ui  = get_tree().get_first_node_in_group("interior_bloque")
 
 	if (dlg and dlg.visible) or (quiz and quiz.visible) \
 			or (mision_ui and mision_ui.visible) \
 			or (minijuego_ui and minijuego_ui.visible) \
 			or (tutorial_ui and tutorial_ui.visible) \
-			or (crisis_ui and crisis_ui.visible):
+			or (crisis_ui and crisis_ui.visible) \
+			or (interior_ui and interior_ui.visible):
 		velocity = Vector2.ZERO
 		_animar("idle_" + _dir_actual)
 		move_and_slide()

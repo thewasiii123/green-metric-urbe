@@ -9,6 +9,7 @@ extends Area2D
 @export var mision_id  : String            = ""
 @export var dialogos   : PackedStringArray = PackedStringArray(["Hola."])
 @export var color      : Color             = Color(0.5, 0.5, 0.5)
+@export var tipo_npc   : String            = "prof_h"
 
 signal mision_iniciada(id: String)
 
@@ -19,73 +20,173 @@ var _char_visual  : NpcChar  = null
 
 
 # ════════════════════════════════════════════════════════════
-# INNER CLASS — personaje dibujado proceduralmente
-# Cada NPC tiene un color único → silueta única.
+# INNER CLASS — personaje procedural con tipos:
+# rector | prof_h | prof_m | est_h | est_m
+# Escala 1.0 → más pequeños que el avatar (1.5×).
 # ════════════════════════════════════════════════════════════
 class NpcChar extends Node2D:
-	var col     : Color = Color(0.5, 0.5, 0.5)
-	var glow_on : bool  = false
-	var _t      : float = 0.0
+	var col     : Color  = Color(0.5, 0.5, 0.5)
+	var tipo    : String = "prof_h"
+	var glow_on : bool   = false
+	var _t      : float  = 0.0
 
 	func _process(delta: float) -> void:
 		_t += delta
 		queue_redraw()
 
 	func _draw() -> void:
-		var puls := 1.0 + 0.03 * sin(_t * 2.2)
-		var bob  := sin(_t * 1.8) * 1.2        # respiración suave
+		var bob := sin(_t * 1.6) * 0.6
 
-		# ── Halo (activo solo al acercarse el jugador) ────────
 		if glow_on:
-			var ga := 0.13 + 0.09 * sin(_t * 3.0)
-			draw_circle(Vector2(0, -12), 21.0, Color(col.r, col.g, col.b, ga))
-			draw_arc(Vector2(0, -12), 24.0, 0.0, TAU, 32,
-					 Color(col.r, col.g, col.b, ga * 0.5), 1.5)
+			var ga := 0.09 + 0.05 * sin(_t * 2.5)
+			draw_circle(Vector2(0, bob - 18), 20.0, Color(col.r, col.g, col.b, ga))
 
-		# ── Sombra en el suelo ────────────────────────────────
-		draw_arc(Vector2(0, 1), 9.0, 0.0, PI, 12, Color(0.0, 0.0, 0.0, 0.22), 7.0)
+		draw_arc(Vector2(0, 1.5), 7.0, 0.0, PI, 14, Color(0, 0, 0, 0.24), 5.0)
 
-		# ── Cuerpo (trapecio redondeado) ──────────────────────
-		var bc := col.darkened(0.28)
-		var body := PackedVector2Array([
-			Vector2(-7, bob - 15), Vector2( 7, bob - 15),
-			Vector2( 8, bob -  1), Vector2(-8, bob -  1)
-		])
-		draw_colored_polygon(body, bc)
-		for i in body.size():
-			draw_line(body[i], body[(i + 1) % body.size()],
-					  col.lightened(0.22), 1.2)
+		match tipo:
+			"rector" : _draw_rector(bob)
+			"prof_m" : _draw_prof_m(bob)
+			"prof_h" : _draw_prof_h(bob)
+			"est_h"  : _draw_est_h(bob)
+			"est_m"  : _draw_est_m(bob)
+			_        : _draw_prof_h(bob)
 
-		# Brillo en hombro izquierdo
-		draw_arc(Vector2(-7, bob - 13), 3.2, PI, PI * 1.65, 8,
-				 col.lightened(0.55), 1.6)
+	# ── Helpers ───────────────────────────────────────────────
+	func _sk() -> Color:
+		return Color(0.83, 0.71, 0.59)
 
-		# ── Cuello ────────────────────────────────────────────
-		draw_rect(Rect2(-2.2, bob - 19.5, 4.4, 5.5), col.darkened(0.12))
+	func _hr() -> Color:
+		var h := Color(col.r * 0.27, col.g * 0.21, col.b * 0.19).clamp()
+		if h.get_luminance() < 0.025:
+			h = Color(0.13, 0.09, 0.06)
+		return h
 
-		# ── Cabeza ────────────────────────────────────────────
-		var hp := Vector2(0, bob - 27.5)
-		var hr := 10.2 * puls
-		draw_circle(hp, hr, col.lightened(0.08))
-		draw_arc(hp, hr, 0.0, TAU, 28, col.lightened(0.38), 1.8)
+	# Cabeza + ojos + cejas + boca; long_hair = pelo que cae a los lados
+	func _draw_face(bob: float, hair_col: Color, long_hair: bool) -> void:
+		var sk := _sk()
+		var hp := Vector2(0, bob - 30)
+		draw_circle(hp, 7.5, sk)
+		draw_arc(hp, 7.5, 0.0, TAU, 20, sk.darkened(0.13), 1.0)
+		if long_hair:
+			draw_arc(hp, 7.5, PI * 0.55, PI * 2.45, 18, hair_col, 8.0)
+			draw_rect(Rect2(-9.5, bob - 34, 2.5, 11.0), hair_col)
+			draw_rect(Rect2(7.0,  bob - 34, 2.5, 11.0), hair_col)
+		else:
+			draw_arc(hp + Vector2(0, -1.5), 7.5, PI * 0.76, PI * 2.24, 16, hair_col, 8.5)
+		var el := hp + Vector2(-2.4, -0.8)
+		var er := hp + Vector2( 2.4, -0.8)
+		draw_circle(el, 1.6, Color(0.95, 0.95, 0.95))
+		draw_circle(er, 1.6, Color(0.95, 0.95, 0.95))
+		draw_circle(el + Vector2(0.3,  0.2),  0.9,  Color(0.10, 0.07, 0.04))
+		draw_circle(er + Vector2(0.3,  0.2),  0.9,  Color(0.10, 0.07, 0.04))
+		draw_circle(el + Vector2(0.7, -0.35), 0.35, Color(1, 1, 1, 0.85))
+		draw_circle(er + Vector2(0.7, -0.35), 0.35, Color(1, 1, 1, 0.85))
+		draw_line(hp + Vector2(-4.5, -5.0), hp + Vector2(-1.2, -4.5), hair_col, 1.2)
+		draw_line(hp + Vector2( 1.2, -4.5), hp + Vector2( 4.5, -5.0), hair_col, 1.2)
+		draw_line(hp + Vector2(-2.0,  4.5), hp + Vector2( 2.0,  4.5),
+				  Color(0.60, 0.46, 0.36, 0.88), 1.1)
 
-		# ── Ojos ──────────────────────────────────────────────
-		var el := hp + Vector2(-3.5, -1.2)
-		var er := hp + Vector2( 3.5, -1.2)
-		draw_circle(el, 1.95, Color(1.0, 1.0, 1.0, 0.93))
-		draw_circle(er, 1.95, Color(1.0, 1.0, 1.0, 0.93))
-		draw_circle(el + Vector2(0.2,  0.3), 1.1, Color(0.08, 0.04, 0.18))
-		draw_circle(er + Vector2(0.2,  0.3), 1.1, Color(0.08, 0.04, 0.18))
-		draw_circle(el + Vector2(0.8, -0.6), 0.45, Color(1.0, 1.0, 1.0, 0.88))
-		draw_circle(er + Vector2(0.8, -0.6), 0.45, Color(1.0, 1.0, 1.0, 0.88))
+	# ── Tipos ─────────────────────────────────────────────────
+	func _draw_rector(bob: float) -> void:
+		var sk   := _sk()
+		var suit := Color(0.10, 0.10, 0.16)
+		draw_rect(Rect2(-6, bob - 1, 5, 4), Color(0.08, 0.06, 0.04))
+		draw_rect(Rect2(1,  bob - 1, 5, 4), Color(0.08, 0.06, 0.04))
+		draw_rect(Rect2(-5, bob - 12, 10, 11), suit.lightened(0.07))
+		draw_line(Vector2(0, bob - 12), Vector2(0, bob - 1), suit, 0.8)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-7, bob - 23), Vector2(7, bob - 23),
+			Vector2(6,  bob - 12), Vector2(-6, bob - 12)
+		]), suit)
+		draw_rect(Rect2(-2, bob - 23, 4, 6), Color(0.93, 0.93, 0.93))
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-1, bob - 22), Vector2(1, bob - 22), Vector2(0.5, bob - 13)
+		]), col.darkened(0.12))
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-7, bob - 23), Vector2(-1.5, bob - 18), Vector2(-6, bob - 13)
+		]), suit.lightened(0.20))
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(7,  bob - 23), Vector2(1.5, bob - 18), Vector2(6, bob - 13)
+		]), suit.lightened(0.20))
+		draw_circle(Vector2(-3.5, bob - 17), 2.5, Color(0.90, 0.80, 0.15))
+		draw_rect(Rect2(-2, bob - 26, 4, 4), sk)
+		_draw_face(bob, Color(0.68, 0.68, 0.73), false)
 
-		# ── Boca (sonrisa) ────────────────────────────────────
-		draw_arc(hp + Vector2(0, 4.5), 4.0, 0.28, PI - 0.28, 10,
-				 col.lightened(0.55), 1.7)
+	func _draw_prof_h(bob: float) -> void:
+		var sk     := _sk()
+		var pants  := Color(col.r * 0.22, col.g * 0.22, col.b * 0.30 + 0.04).clamp()
+		var jacket := col.darkened(0.18)
+		draw_rect(Rect2(-6, bob - 1, 5, 4), Color(0.10, 0.08, 0.05))
+		draw_rect(Rect2(1,  bob - 1, 5, 4), Color(0.10, 0.08, 0.05))
+		draw_rect(Rect2(-5, bob - 12, 10, 11), pants)
+		draw_line(Vector2(0, bob - 12), Vector2(0, bob - 1), pants.darkened(0.18), 0.7)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-7, bob - 23), Vector2(7, bob - 23),
+			Vector2(6,  bob - 12), Vector2(-6, bob - 12)
+		]), jacket)
+		draw_rect(Rect2(-2, bob - 23, 4, 6), Color(0.93, 0.93, 0.93))
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-7, bob - 23), Vector2(-1.5, bob - 18), Vector2(-6, bob - 13)
+		]), jacket.lightened(0.16))
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(7,  bob - 23), Vector2(1.5, bob - 18), Vector2(6, bob - 13)
+		]), jacket.lightened(0.16))
+		draw_rect(Rect2(-5.5, bob - 19, 4.0, 3.0), Color(0.90, 0.90, 0.90, 0.92))
+		draw_rect(Rect2(-5.5, bob - 19, 4.0, 3.0), col.lightened(0.28), false, 0.8)
+		draw_rect(Rect2(-2, bob - 26, 4, 4), sk)
+		_draw_face(bob, _hr(), false)
 
-		# ── Collar ────────────────────────────────────────────
-		draw_arc(hp + Vector2(0, 7.8), 3.9, 0.4, PI - 0.4, 10,
-				 col.lightened(0.48), 1.5)
+	func _draw_prof_m(bob: float) -> void:
+		var sk     := _sk()
+		var pants  := Color(col.r * 0.22, col.g * 0.22, col.b * 0.30 + 0.04).clamp()
+		var blouse := col
+		draw_rect(Rect2(-5, bob - 1, 4, 4), Color(0.52, 0.28, 0.26))
+		draw_rect(Rect2(1,  bob - 1, 4, 4), Color(0.52, 0.28, 0.26))
+		draw_rect(Rect2(-5, bob - 12, 10, 11), pants)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-6, bob - 23), Vector2(6, bob - 23),
+			Vector2(6,  bob - 12), Vector2(-6, bob - 12)
+		]), blouse.darkened(0.14))
+		draw_rect(Rect2(-2, bob - 23, 4, 5), blouse.lightened(0.16))
+		draw_rect(Rect2(-5.5, bob - 19, 4.0, 3.0), Color(0.90, 0.90, 0.90, 0.92))
+		draw_rect(Rect2(-5.5, bob - 19, 4.0, 3.0), col.lightened(0.28), false, 0.8)
+		draw_rect(Rect2(-2, bob - 26, 4, 4), sk)
+		_draw_face(bob, _hr(), true)
+
+	func _draw_est_h(bob: float) -> void:
+		var sk     := _sk()
+		var jeans  := Color(0.17, 0.24, 0.44)
+		var tshirt := col.lightened(0.08)
+		draw_rect(Rect2(-6, bob - 1, 5, 4), Color(0.84, 0.84, 0.87))
+		draw_rect(Rect2(1,  bob - 1, 5, 4), Color(0.84, 0.84, 0.87))
+		draw_rect(Rect2(-7, bob,     6, 1), Color(0.74, 0.74, 0.77))
+		draw_rect(Rect2(1,  bob,     6, 1), Color(0.74, 0.74, 0.77))
+		draw_rect(Rect2(-5, bob - 12, 10, 11), jeans)
+		draw_line(Vector2(0, bob - 12), Vector2(0, bob - 1), jeans.darkened(0.16), 0.7)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-7, bob - 22), Vector2(7, bob - 22),
+			Vector2(6,  bob - 12), Vector2(-6, bob - 12)
+		]), tshirt)
+		draw_rect(Rect2(6, bob - 21, 5, 9), col.darkened(0.28))
+		draw_rect(Rect2(6, bob - 21, 5, 9), Color(0, 0, 0, 0.18), false, 0.7)
+		draw_rect(Rect2(-2, bob - 26, 4, 5), sk)
+		_draw_face(bob, _hr(), false)
+
+	func _draw_est_m(bob: float) -> void:
+		var sk      := _sk()
+		var bottoms := Color(col.r * 0.34, col.g * 0.30, col.b * 0.46 + 0.08).clamp()
+		var top     := col.lightened(0.10)
+		draw_rect(Rect2(-5, bob - 1, 4, 4), Color(0.48, 0.26, 0.66))
+		draw_rect(Rect2(1,  bob - 1, 4, 4), Color(0.48, 0.26, 0.66))
+		draw_rect(Rect2(-4, bob - 12, 8, 11), bottoms)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-6, bob - 22), Vector2(6, bob - 22),
+			Vector2(5,  bob - 12), Vector2(-5, bob - 12)
+		]), top)
+		draw_rect(Rect2(5, bob - 21, 5, 9), col.darkened(0.28))
+		draw_rect(Rect2(5, bob - 21, 5, 9), Color(0, 0, 0, 0.18), false, 0.7)
+		draw_rect(Rect2(-2, bob - 26, 4, 5), sk)
+		_draw_face(bob, _hr(), true)
 
 
 # ════════════════════════════════════════════════════════════
@@ -108,7 +209,8 @@ func _ocultar_sprite_placeholder() -> void:
 func _crear_char_visual() -> void:
 	_char_visual       = NpcChar.new()
 	_char_visual.col   = color
-	_char_visual.scale = Vector2(1.55, 1.55)
+	_char_visual.tipo  = tipo_npc
+	_char_visual.scale = Vector2(1.0, 1.0)
 	add_child(_char_visual)
 
 
@@ -155,10 +257,8 @@ func _crear_burbuja() -> void:
 	var ancho : float = max(nombre_lbl.size.x + 18.0, 60.0)
 	var alto  : float = 26.0
 
-	# NpcChar a escala 1.55: cabeza aprox en y=-27.5*1.55=-42.6, radio=10.2*1.55=15.8
-	# Tope de la cabeza en espacio padre: -42.6 - 15.8 = -58.4
-	# Colocamos el borde inferior de fondo a -64 para dejar 6px de margen
-	fondo.position = Vector2(-ancho * 0.5, -alto - 64.0)
+	# NpcChar escala 1.0: cabeza en y=-30, radio=7.5, tope≈-37.5 → borde inferior a -44
+	fondo.position = Vector2(-ancho * 0.5, -alto - 44.0)
 	fondo.size     = Vector2(ancho, alto)
 
 	# Punto indicador pulsante bajo la burbuja

@@ -14,9 +14,6 @@ const EDIFICIOS : Array = [
 	# Lago norte y=0..80
 	[704,  40, 1408,  80],
 
-	# Estacionamiento M5  x=0..220, y=120..540
-	[110, 330,  220, 420],
-
 	# Cafetín M3  x=280..480, y=120..280
 	[380, 200,  200, 160],
 

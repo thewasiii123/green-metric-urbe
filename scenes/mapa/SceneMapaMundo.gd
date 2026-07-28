@@ -46,7 +46,8 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Rector Morales",
 		"mision_id": "mision_rector",
-		"pos":       Vector2(860, 510),   # frente norte del Rectorado (en ZonaRectorado y=472..672)
+		"tipo":      "rector",
+		"pos":       Vector2(778, 464),   # plaza norte del Rectorado, fuera del edificio
 		"color":     Color(0.5, 0.1, 0.9),
 		"dialogos":  PackedStringArray([
 			"Bienvenido, Eco-Ranger. Soy el Rector de URBE.",
@@ -58,6 +59,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Dra. Luna",
 		"mision_id": "mision_educacion",
+		"tipo":      "prof_m",
 		"pos":       Vector2(1100, 400),   # corredor este (BloqueE↔EstDistancia x=1080..1120)
 		"color":     Color(0.35, 0.0, 0.65),
 		"dialogos":  PackedStringArray([
@@ -71,6 +73,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Prof. González",
 		"mision_id": "mision_bloque_a",
+		"tipo":      "prof_h",
 		"pos":       Vector2(380, 660),   # pasillo BloqueC/B↔BloqueA (y=640..680)
 		"color":     Color(0.9, 0.45, 0.0),
 		"dialogos":  PackedStringArray([
@@ -83,7 +86,8 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Dr. Pérez",
 		"mision_id": "mision_bloque_b",
-		"pos":       Vector2(610, 590),   # dentro de ZonaBloqueB (y=516..644)
+		"tipo":      "prof_h",
+		"pos":       Vector2(550, 652),   # corredor sur BloqueB, accesible
 		"color":     Color(0.85, 0.35, 0.0),
 		"dialogos":  PackedStringArray([
 			"Doctor Perez, coordinador de Energia y Cambio Climatico.",
@@ -95,6 +99,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Ing. Herrera",
 		"mision_id": "mision_bloque_c",
+		"tipo":      "prof_m",
 		"pos":       Vector2(380, 500),   # pasillo BloqueD↔BloqueC (y=480..520)
 		"color":     Color(0.95, 0.55, 0.0),
 		"dialogos":  PackedStringArray([
@@ -107,6 +112,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Técn. Ruiz",
 		"mision_id": "mision_bloque_d",
+		"tipo":      "prof_h",
 		"pos":       Vector2(380, 300),   # pasillo Cafetín↔BloqueD (y=280..320)
 		"color":     Color(0.80, 0.40, 0.0),
 		"dialogos":  PackedStringArray([
@@ -119,6 +125,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Coord. Salinas",
 		"mision_id": "mision_bloque_e",
+		"tipo":      "prof_m",
 		"pos":       Vector2(600, 170),   # patio central, norte (frente a BloqueE)
 		"color":     Color(0.90, 0.50, 0.05),
 		"dialogos":  PackedStringArray([
@@ -132,6 +139,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Ing. Ramírez",
 		"mision_id": "mision_bloque_f",
+		"tipo":      "prof_m",
 		"pos":       Vector2(1100, 250),   # corredor este, zona norte
 		"color":     Color(0.2, 0.7, 0.2),
 		"dialogos":  PackedStringArray([
@@ -144,6 +152,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Sr. Blanco",
 		"mision_id": "mision_fotocopiado",
+		"tipo":      "prof_h",
 		"pos":       Vector2(90, 558),   # pasillo Estac↔Fotocopiado (y=540..580, x=0..180)
 		"color":     Color(0.3, 0.65, 0.3),
 		"dialogos":  PackedStringArray([
@@ -157,6 +166,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Lic. Torres",
 		"mision_id": "mision_agua",
+		"tipo":      "prof_m",
 		"pos":       Vector2(560, 430),   # patio central sur (fuente, zona de agua)
 		"color":     Color(0.0, 0.55, 0.75),
 		"dialogos":  PackedStringArray([
@@ -170,6 +180,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Carlos",
 		"mision_id": "mision_transporte",
+		"tipo":      "est_h",
 		"pos":       Vector2(250, 330),   # corredor oeste, junto al Estacionamiento
 		"color":     Color(0.1, 0.3, 0.8),
 		"dialogos":  PackedStringArray([
@@ -183,6 +194,7 @@ var DATOS_NPCS : Array = [
 	{
 		"nombre":    "Yulimar",
 		"mision_id": "mision_residuos",
+		"tipo":      "est_m",
 		"pos":       Vector2(340, 100),   # camino norte, frente al Cafetín
 		"color":     Color(0.85, 0.75, 0.0),
 		"dialogos":  PackedStringArray([
@@ -401,9 +413,11 @@ var _pc_barra_fill       : ColorRect = null
 var _pc_estado_lbl       : Label    = null
 var _pc_btn_servicio     : Button   = null
 var _contenedor_en_panel : Node2D   = null
-var _timer_crisis     : float       = 0.0
-const _CRISIS_MIN     : float       = 90.0
-const _CRISIS_MAX     : float       = 180.0
+var _timer_crisis         : float   = 0.0
+var _crises_desbloqueadas : bool    = false
+var _menu_pausa_canvas    : CanvasLayer = null
+const _CRISIS_MIN         : float   = 90.0
+const _CRISIS_MAX         : float   = 180.0
 var _hud_creditos_lbl : Label       = null
 var _hud_energia_lbl  : Label       = null
 var _insignia_lbl     : Label       = null
@@ -482,6 +496,7 @@ func _ready() -> void:
 	# cargar_progreso se llama desde _on_modulos_cargados para no saturar el HTTPRequest
 
 	_init_sistemas_eva()
+	_construir_menu_pausa()
 
 
 # ── HUD ──────────────────────────────────────────────────────
@@ -588,6 +603,7 @@ func _spawn_npcs() -> void:
 		npc.mision_id  = datos["mision_id"]
 		npc.dialogos   = datos["dialogos"]
 		npc.color      = datos["color"]
+		npc.tipo_npc   = datos.get("tipo", "prof_h")
 		npc.position   = datos["pos"]
 		npc.z_index    = 1
 		var vis_node = npc.get_node_or_null("Visual")
@@ -640,12 +656,102 @@ func _on_zona_salida() -> void:
 	_nombre_activo      = ""
 
 
+# ── Menú de pausa (ESC) ──────────────────────────────────────
+func _construir_menu_pausa() -> void:
+	_menu_pausa_canvas = CanvasLayer.new()
+	_menu_pausa_canvas.layer = 30
+	_menu_pausa_canvas.visible = false
+	add_child(_menu_pausa_canvas)
+
+	var bg := ColorRect.new()
+	bg.color = Color(0.0, 0.0, 0.0, 0.55)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_menu_pausa_canvas.add_child(bg)
+
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(360, 290)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left   = -180.0
+	panel.offset_top    = -145.0
+	panel.offset_right  =  180.0
+	panel.offset_bottom =  145.0
+	var ps := StyleBoxFlat.new()
+	ps.bg_color     = Color(0.05, 0.08, 0.13, 0.97)
+	ps.border_color = Color(0.22, 0.68, 0.90)
+	ps.set_border_width_all(2)
+	ps.set_corner_radius_all(14)
+	ps.shadow_color = Color(0.10, 0.40, 0.70, 0.50)
+	ps.shadow_size  = 16
+	panel.add_theme_stylebox_override("panel", ps)
+	_menu_pausa_canvas.add_child(panel)
+
+	var vb := VBoxContainer.new()
+	vb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vb.offset_left   =  20.0
+	vb.offset_top    =  16.0
+	vb.offset_right  = -20.0
+	vb.offset_bottom = -16.0
+	vb.add_theme_constant_override("separation", 14)
+	panel.add_child(vb)
+
+	var tit := Label.new()
+	tit.text = "⏸  Menú de Pausa"
+	tit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tit.add_theme_font_size_override("font_size", 20)
+	tit.add_theme_color_override("font_color", Color(0.80, 0.95, 1.00))
+	vb.add_child(tit)
+
+	var sep := HSeparator.new()
+	sep.add_theme_color_override("color", Color(0.22, 0.68, 0.90, 0.5))
+	vb.add_child(sep)
+
+	var btn_login := Button.new()
+	btn_login.text = "🚪  Salir al Login"
+	btn_login.add_theme_font_size_override("font_size", 16)
+	btn_login.pressed.connect(func():
+		get_tree().change_scene_to_file("res://scenes/login/scene_login.tscn"))
+	vb.add_child(btn_login)
+
+	var btn_reset := Button.new()
+	btn_reset.text = "🔄  Reiniciar Misiones"
+	btn_reset.add_theme_font_size_override("font_size", 16)
+	btn_reset.pressed.connect(func():
+		var nm = _nivel_mgr()
+		if nm:
+			nm.reset_progreso()
+		get_tree().reload_current_scene())
+	vb.add_child(btn_reset)
+
+	var btn_cont := Button.new()
+	btn_cont.text = "▶  Continuar"
+	btn_cont.add_theme_font_size_override("font_size", 16)
+	btn_cont.pressed.connect(_toggle_menu_pausa)
+	vb.add_child(btn_cont)
+
+
+func _toggle_menu_pausa() -> void:
+	if not is_instance_valid(_menu_pausa_canvas): return
+	_menu_pausa_canvas.visible = not _menu_pausa_canvas.visible
+
+
 # ── Input ────────────────────────────────────────────────────
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
+
+	# ── ESC: abrir / cerrar menú de pausa ────────────────────────
+	if event.keycode == KEY_ESCAPE:
+		_toggle_menu_pausa()
+		get_viewport().set_input_as_handled()
+		return
+
 	if event.keycode != KEY_E:
 		return
+
+	# Si el menú de pausa está abierto no procesar E
+	if is_instance_valid(_menu_pausa_canvas) and _menu_pausa_canvas.visible:
+		return
+
 	# Si alguna UI de misión/diálogo/quiz ya está activa, no interferir
 	if (_dialogo_ui and _dialogo_ui.visible) or (_quiz_ui and _quiz_ui.visible):
 		return
@@ -653,6 +759,12 @@ func _input(event: InputEvent) -> void:
 		return
 	if _minijuego_residuos and _minijuego_residuos.visible:
 		return
+
+	# Si hay un interior de bloque activo, no capturar el E (lo maneja interior_bloque)
+	var interior_bloque_ui := get_tree().get_first_node_in_group("interior_bloque")
+	if interior_bloque_ui and interior_bloque_ui.visible:
+		return
+
 	# E cierra la escena de edificio (funciona como "Salir")
 	if _edificio_ui and _edificio_ui.visible:
 		_on_salida_edificio()
@@ -664,13 +776,13 @@ func _input(event: InputEvent) -> void:
 		return
 	# ── Nivel 1: zonas de plantación ────────────────────────────
 	for zt in get_tree().get_nodes_in_group("zona_tierra"):
-		if zt.get("_jugador_cerca") and not zt.get("_completada"):
+		if zt.get("_jugador_cerca"):
 			zt.intentar_interactuar()
 			get_viewport().set_input_as_handled()
 			return
 	# ── Nivel 2: puntos críticos de energía ──────────────────────
 	for pe in get_tree().get_nodes_in_group("punto_energia"):
-		if pe.get("_jugador_cerca") and not pe.get("_completado"):
+		if pe.get("_jugador_cerca"):
 			pe.intentar_interactuar()
 			get_viewport().set_input_as_handled()
 			return
@@ -1276,7 +1388,6 @@ func _init_sistemas_eva() -> void:
 	_crisis_ui = CRISIS_ESCENA.new()
 	add_child(_crisis_ui)
 	_crisis_ui.crisis_resulta.connect(_on_crisis_resulta)
-	_timer_crisis = _CRISIS_MIN
 
 	_leaderboard_ui = LEADERBOARD_ESCENA.new()
 	add_child(_leaderboard_ui)
@@ -1355,6 +1466,7 @@ func _init_sistemas_eva() -> void:
 
 
 func _process(delta: float) -> void:
+	if not _crises_desbloqueadas: return
 	if _tutorial_ui and _tutorial_ui.visible: return
 	if _crisis_ui and _crisis_ui.visible: return
 	_timer_crisis -= delta
@@ -1388,7 +1500,7 @@ func _on_energia_cambiada(actual: int, _maximo: int) -> void:
 
 
 func _on_tutorial_completado() -> void:
-	_timer_crisis = _CRISIS_MIN
+	pass  # crises solo se desbloquean al completar el juego
 
 
 func _on_crisis_resulta(modulo_id: int, exito: bool) -> void:
@@ -1440,15 +1552,7 @@ const DATOS_ZONAS_VERDES : Array = [
 ]
 
 func _spawn_zonas_verdes() -> void:
-	for dato : Dictionary in DATOS_ZONAS_VERDES:
-		var zona := ZONA_VERDE_ESCENA.new()
-		zona.nombre_zona = dato["nombre"]
-		zona.modulo_id   = dato["mod"]
-		zona.position    = dato["pos"]
-		zona.radio       = float(dato.get("radio", 32.0))
-		add_child(zona)
-		zona.zona_adoptada.connect(_on_zona_verde_adoptada)
-		_zonas_verdes.append(zona)
+	pass  # zonas mejorables con ecocredits eliminadas del mapa
 
 
 func _on_zona_verde_adoptada(nombre_zona: String, modulo_id: int) -> void:
@@ -1504,6 +1608,9 @@ func _verificar_misiones_completadas() -> void:
 		if float(_progreso_modulos[mod_id]) >= 0.80:
 			total_completadas += 1
 	if total_completadas >= 6:
+		if not _crises_desbloqueadas:
+			_crises_desbloqueadas = true
+			_timer_crisis = _CRISIS_MIN
 		await get_tree().create_timer(1.5).timeout
 		_abrir_resultados()
 
@@ -1779,27 +1886,51 @@ func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:
 
 const DATOS_ZONAS_TIERRA : Array = [
 	# Corredor Oeste — franja verde accesible entre Estacionamiento y BloqueD
-	{"id": "plantar_corredores", "nombre": "Corredor Principal", "indice": 0,
+	{"id": "plantar_corredores", "nombre": "Corredor Principal",   "indice": 0,
 	 "pos": Vector2(250, 390)},
-	# Zona Cultural — área verde al sur del Rectorado, totalmente accesible
-	{"id": "plantar_rectorado",  "nombre": "Jardín del Rectorado","indice": 1,
-	 "pos": Vector2(870, 680)},
+	# Pasillo Central — corredor central entre bloques, fuera del Rectorado (x=740-1060, y=480-660)
+	{"id": "plantar_rectorado",  "nombre": "Jardín del Rectorado", "indice": 1,
+	 "pos": Vector2(660, 455)},
 	# Patio Central — zona abierta central del campus
 	{"id": "plantar_patio",      "nombre": "Patio Central",        "indice": 2,
 	 "pos": Vector2(640, 300)},
+	# Camino Norte — franja norte, fuera del lago (y>80) y del Estacionamiento (y<120)
+	{"id": "plantar_norte",      "nombre": "Camino Norte",         "indice": 3,
+	 "pos": Vector2(160, 110)},
+	# Este del Cafetín — fuera del Cafetín (x=280-480), en el corredor central norte
+	{"id": "plantar_cafetín",    "nombre": "Norte del Cafetín",    "indice": 4,
+	 "pos": Vector2(545, 215)},
+	# Corredor Central — zona abierta entre Cafetín, Bloque D y Bloque B
+	{"id": "plantar_este",       "nombre": "Corredor Central",     "indice": 5,
+	 "pos": Vector2(500, 360)},
+	# Zona Sur — centro sur del campus, lejos de NPC(550,652) y contenedor(870,705)
+	{"id": "plantar_sur",        "nombre": "Zona Sur del Campus",  "indice": 6,
+	 "pos": Vector2(700, 650)},
+	# Sur del Estacionamiento — fuera del Estacionamiento (x>220, y>540)
+	{"id": "plantar_oeste",      "nombre": "Corredor Oeste Sur",   "indice": 7,
+	 "pos": Vector2(255, 545)},
 ]
 
 const DATOS_PUNTOS_ENERGIA : Array = [
 	# Misiones LED (interior navegable)
-	{"id": "led_bloque_a", "nombre": "Bloque A", "tipo": "led",   "indice_bloque": 0,
+	{"id": "led_bloque_a", "nombre": "Bloque A", "tipo": "led", "indice_bloque": 0,
 	 "pos": Vector2(415, 668)},
-	{"id": "led_bloque_b", "nombre": "Bloque B", "tipo": "led",   "indice_bloque": 1,
-	 "pos": Vector2(580, 568)},
-	{"id": "led_bloque_c", "nombre": "Bloque C", "tipo": "led",   "indice_bloque": 2,
+	{"id": "led_bloque_b", "nombre": "Bloque B", "tipo": "led", "indice_bloque": 1,
+	 "pos": Vector2(555, 504)},
+	{"id": "led_bloque_c", "nombre": "Bloque C", "tipo": "led", "indice_bloque": 2,
 	 "pos": Vector2(390, 498)},
+	# Bloque D — Administración, separado del NPC(380,300)
+	{"id": "led_bloque_d", "nombre": "Bloque D", "tipo": "led", "indice_bloque": 3,
+	 "pos": Vector2(450, 295)},
+	# Bloque E — Computación, separado del contenedor(640,170) y NPC(600,170)
+	{"id": "led_bloque_e", "nombre": "Bloque E", "tipo": "led", "indice_bloque": 4,
+	 "pos": Vector2(720, 180)},
+	# Bloque F — Estudios a Distancia, separado de NPC(1100,250) y NPC(1100,400)
+	{"id": "led_bloque_f", "nombre": "Bloque F", "tipo": "led", "indice_bloque": 5,
+	 "pos": Vector2(1150, 310)},
 	# Misiones de paneles solares
 	{"id": "solar_rectorado",       "nombre": "Rectorado",      "tipo": "solar", "indice_mision": 0,
-	 "pos": Vector2(950, 495)},
+	 "pos": Vector2(858, 466)},
 	{"id": "solar_estacionamiento", "nombre": "Estacionamiento","tipo": "solar", "indice_mision": 1,
 	 "pos": Vector2(210, 618)},
 ]

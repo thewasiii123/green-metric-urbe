@@ -25,6 +25,7 @@ var _prompt_lbl     : Label       = null
 
 # Planta visual que aparece cuando la misión está completada
 var _planta_visual  : Node2D  = null
+var _info_panel     : Panel   = null
 
 
 class TierraVisual extends Node2D:
@@ -71,26 +72,7 @@ class TierraVisual extends Node2D:
 				 Color(0.55, 0.88, 0.25, 0.6 + 0.3 * sin(_t * 2.5)), 1.5)
 
 	func _draw_completada() -> void:
-		# Tierra completada con planta crecida
-		var puntos := PackedVector2Array()
-		for i in 28:
-			var a := float(i) / 28.0 * TAU
-			puntos.append(Vector2(cos(a) * RADIO_TIERRA, sin(a) * RADIO_TIERRA * 0.55))
-		draw_colored_polygon(puntos, Color(0.32, 0.20, 0.08))
-		# Borde verde brillante (planta saludable)
-		draw_arc(Vector2(0, 0), RADIO_TIERRA, 0.0, TAU, 28,
-				 Color(0.15, 0.75, 0.20, 0.85), 4.0)
-		# Halo de éxito pulsante
-		var ga := 0.10 + 0.08 * sin(_t * 2.0)
-		draw_circle(Vector2(0, -10), 30.0, Color(0.20, 0.80, 0.25, ga))
-		# Planta simplificada (árbol o arbusto)
 		_draw_planta_simple()
-		# Chispas verdes girando
-		for i in 6:
-			var angle := _t * 1.2 + float(i) / 6.0 * TAU
-			var r := 36.0 + sin(_t * 2.0 + i) * 4.0
-			var p := Vector2(cos(angle) * r, sin(angle) * r * 0.5 - 10)
-			draw_circle(p, 2.2, Color(0.20, 0.90, 0.30, 0.6))
 
 	func _draw_planta_simple() -> void:
 		# usa RADIO_TIERRA de esta clase (inner class const)
@@ -160,6 +142,67 @@ func _crear_prompt() -> void:
 	_prompt_lbl.add_theme_color_override("font_color", Color(0.88, 1.0, 0.88))
 	_prompt_panel.add_child(_prompt_lbl)
 
+	# ── Panel de información (visible tras completar la misión) ─
+	_info_panel = Panel.new()
+	_info_panel.custom_minimum_size = Vector2(340, 250)
+	_info_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_info_panel.offset_left   = -170.0
+	_info_panel.offset_top    = -125.0
+	_info_panel.offset_right  =  170.0
+	_info_panel.offset_bottom =  125.0
+	_info_panel.visible   = false
+	_info_panel.modulate.a = 0.0
+	_prompt_canvas.add_child(_info_panel)
+
+	var ip_st := StyleBoxFlat.new()
+	ip_st.bg_color     = Color(0.04, 0.10, 0.06, 0.97)
+	ip_st.border_color = Color(0.22, 0.88, 0.30)
+	ip_st.set_border_width_all(2)
+	ip_st.set_corner_radius_all(12)
+	ip_st.shadow_color = Color(0.10, 0.50, 0.15, 0.55)
+	ip_st.shadow_size  = 14
+	_info_panel.add_theme_stylebox_override("panel", ip_st)
+
+	var ip_vb := VBoxContainer.new()
+	ip_vb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ip_vb.offset_left   =  14.0
+	ip_vb.offset_top    =  12.0
+	ip_vb.offset_right  = -14.0
+	ip_vb.offset_bottom = -12.0
+	ip_vb.add_theme_constant_override("separation", 6)
+	_info_panel.add_child(ip_vb)
+
+	var ip_tit := Label.new()
+	ip_tit.text = "🌳 Árbol Plantado — Impacto Ambiental"
+	ip_tit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ip_tit.add_theme_font_size_override("font_size", 15)
+	ip_tit.add_theme_color_override("font_color", Color(0.30, 1.00, 0.40))
+	ip_vb.add_child(ip_tit)
+
+	var ip_sep := HSeparator.new()
+	ip_sep.add_theme_color_override("color", Color(0.22, 0.88, 0.30, 0.5))
+	ip_vb.add_child(ip_sep)
+
+	var ip_body := Label.new()
+	ip_body.text = (
+		"🌿 Absorción de CO₂: ~12 kg / año\n"
+		+ "🌡 Reducción térmica: ↓ 1.5 °C en el área\n"
+		+ "💧 Mejora el drenaje y retención hídrica\n"
+		+ "🐝 Fomenta la biodiversidad local\n"
+		+ "☀️ Genera sombra natural para el campus"
+	)
+	ip_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	ip_body.add_theme_font_size_override("font_size", 12)
+	ip_body.add_theme_color_override("font_color", Color(0.85, 1.0, 0.85))
+	ip_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	ip_vb.add_child(ip_body)
+
+	var ip_btn := Button.new()
+	ip_btn.text = "Cerrar"
+	ip_btn.add_theme_font_size_override("font_size", 13)
+	ip_btn.pressed.connect(_cerrar_info_panel)
+	ip_vb.add_child(ip_btn)
+
 
 func _process(_delta: float) -> void:
 	if not _prompt_panel.visible: return
@@ -178,8 +221,10 @@ func _process(_delta: float) -> void:
 func _al_entrar(body: Node) -> void:
 	if not body.is_in_group("jugador"): return
 	_jugador_cerca = true
-	if _completada: return
-	_prompt_lbl.text = "🌱 [E]  Plantar en %s" % nombre_zona
+	if _completada:
+		_prompt_lbl.text = "✅ [E]  Ver árbol plantado — %s" % nombre_zona
+	else:
+		_prompt_lbl.text = "🌱 [E]  Plantar en %s" % nombre_zona
 	_prompt_panel.modulate.a = 0.0
 	_prompt_panel.visible    = true
 	var tw := create_tween()
@@ -192,12 +237,34 @@ func _al_salir(body: Node) -> void:
 	var tw := create_tween()
 	tw.tween_property(_prompt_panel, "modulate:a", 0.0, 0.16)
 	tw.tween_callback(func(): _prompt_panel.visible = false)
+	if is_instance_valid(_info_panel) and _info_panel.visible:
+		var tw2 := create_tween()
+		tw2.tween_property(_info_panel, "modulate:a", 0.0, 0.16)
+		tw2.tween_callback(func(): _info_panel.visible = false)
 
 
 func intentar_interactuar() -> void:
-	if not _jugador_cerca or _completada: return
+	if not _jugador_cerca: return
+	if _completada:
+		_mostrar_info_completada()
+		return
 	_prompt_panel.visible = false
 	plantar_solicitado.emit(self)
+
+
+func _mostrar_info_completada() -> void:
+	if not is_instance_valid(_info_panel): return
+	_info_panel.visible    = true
+	_info_panel.modulate.a = 0.0
+	var tw := create_tween()
+	tw.tween_property(_info_panel, "modulate:a", 1.0, 0.22)
+
+
+func _cerrar_info_panel() -> void:
+	if not is_instance_valid(_info_panel): return
+	var tw := create_tween()
+	tw.tween_property(_info_panel, "modulate:a", 0.0, 0.16)
+	tw.tween_callback(func(): _info_panel.visible = false)
 
 
 func _marcar_completada() -> void:

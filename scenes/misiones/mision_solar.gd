@@ -26,6 +26,11 @@ const MISIONES_SOLAR : Array = [
 	},
 ]
 
+const BENEFICIOS_SOLAR : Array = [
+	"🌍 CO₂ evitado: ~4.2 t/año\n♻ Energía limpia: 9,600 kWh/año\n💰 Ahorro estimado: ~$1,440/año  ·  Vida útil: 25 años",
+	"🌍 CO₂ evitado: ~2.5 t/año\n♻ Energía limpia: 4,800 kWh/año\n💰 Carga ~20 vehículos eléctricos/año  ·  Vida útil: 25 años",
+]
+
 const PASOS_SOLAR : Array = [
 	{
 		"titulo": "Paso 1 — Evaluación de superficie",
@@ -302,9 +307,9 @@ func _completar_mision() -> void:
 	# Panel de éxito
 	var cel := Panel.new()
 	cel.set_anchors_preset(Control.PRESET_CENTER)
-	cel.custom_minimum_size = Vector2(460, 190)
-	cel.offset_left  = -230.0; cel.offset_top    = -95.0
-	cel.offset_right =  230.0; cel.offset_bottom =  95.0
+	cel.custom_minimum_size = Vector2(500, 280)
+	cel.offset_left  = -250.0; cel.offset_top    = -140.0
+	cel.offset_right =  250.0; cel.offset_bottom =  140.0
 	var cps := StyleBoxFlat.new()
 	cps.bg_color     = Color(0.04, 0.08, 0.04, 0.98)
 	cps.border_color = Color(0.22, 0.90, 0.28)
@@ -314,23 +319,48 @@ func _completar_mision() -> void:
 	cps.shadow_size  = 24
 	cel.add_theme_stylebox_override("panel", cps)
 	add_child(cel)
-	var cl := Label.new()
-	cl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-	cl.autowrap_mode = TextServer.AUTOWRAP_WORD
-	cl.add_theme_font_size_override("font_size", 17)
-	cl.add_theme_color_override("font_color", Color(0.30, 0.95, 0.35))
+	var cel_mg := MarginContainer.new()
+	cel_mg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for mk in ["margin_left","margin_right","margin_top","margin_bottom"]:
+		cel_mg.add_theme_constant_override(mk, 20)
+	cel.add_child(cel_mg)
+	var cel_vb := VBoxContainer.new()
+	cel_vb.alignment = BoxContainer.ALIGNMENT_CENTER
+	cel_vb.add_theme_constant_override("separation", 8)
+	cel_mg.add_child(cel_vb)
 	var m : Dictionary = MISIONES_SOLAR[_mision_idx]
-	cl.text = "☀️ ¡Paneles instalados con éxito!\n\n%s\n%s\n+%d XP  ·  +%d EcoCredits" % [
-		m["nombre"], m["capacidad"], xp, ec
-	]
-	cel.add_child(cl)
+	var titulo_lbl := Label.new()
+	titulo_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	titulo_lbl.add_theme_font_size_override("font_size", 20)
+	titulo_lbl.add_theme_color_override("font_color", Color(0.30, 0.95, 0.35))
+	titulo_lbl.text = "☀️ ¡Sistema solar activo!\n%s" % m["nombre"]
+	cel_vb.add_child(titulo_lbl)
+	var cap_lbl := Label.new()
+	cap_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cap_lbl.add_theme_font_size_override("font_size", 13)
+	cap_lbl.add_theme_color_override("font_color", Color(0.90, 0.85, 0.50))
+	cap_lbl.text = "📐  " + m["capacidad"]
+	cel_vb.add_child(cap_lbl)
+	var sep_cel := HSeparator.new()
+	cel_vb.add_child(sep_cel)
+	var ben_lbl := Label.new()
+	ben_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ben_lbl.add_theme_font_size_override("font_size", 13)
+	ben_lbl.add_theme_color_override("font_color", Color(0.70, 0.92, 0.72))
+	ben_lbl.text = BENEFICIOS_SOLAR[_mision_idx] if _mision_idx < BENEFICIOS_SOLAR.size() else ""
+	ben_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	cel_vb.add_child(ben_lbl)
+	var xp_lbl := Label.new()
+	xp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	xp_lbl.add_theme_font_size_override("font_size", 16)
+	xp_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.18))
+	xp_lbl.text = "+%d XP  ·  +%d EcoCredits" % [xp, ec]
+	cel_vb.add_child(xp_lbl)
 	cel.modulate.a = 0.0
 	var tw := create_tween()
 	tw.tween_property(cel, "modulate:a", 1.0, 0.25)
-	tw.tween_interval(3.0)
-	tw.tween_property(cel, "modulate:a", 0.0, 0.25)
+	tw.tween_interval(5.0)
+	tw.tween_property(cel, "modulate:a", 0.0, 0.30)
 	tw.tween_callback(func():
 		cel.queue_free()
 		_on_salir())
@@ -449,22 +479,23 @@ func _crear_ui() -> void:
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(row)
 
-	# Panel visual del techo (izquierda)
+	# Panel visual del techo (izquierda) — más grande y centrado
 	var vis_cont := Control.new()
-	vis_cont.custom_minimum_size   = Vector2(320, 250)
+	vis_cont.custom_minimum_size   = Vector2(460, 320)
 	vis_cont.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vis_cont.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	vis_cont.clip_contents         = true
 	row.add_child(vis_cont)
 
 	_vis_node = TechoVisual.new()
-	_vis_node.position = Vector2(160, 125)
+	_vis_node.position = Vector2(230, 160)
+	_vis_node.scale    = Vector2(1.6, 1.6)
 	vis_cont.add_child(_vis_node)
 
-	# Grid de paneles (solo visible en paso 3)
+	# Grid de paneles — reescalado para coincidir con TechoVisual x1.6
 	_grid_cont = Control.new()
-	_grid_cont.custom_minimum_size = Vector2(162, 90)
-	_grid_cont.position            = Vector2(-81 + 160, -44 + 125)  # alineado sobre el visual
+	_grid_cont.custom_minimum_size = Vector2(244, 142)
+	_grid_cont.position            = Vector2(230 - 76 * 1.6, 160 - 44 * 1.6)
 	_grid_cont.visible             = false
 	vis_cont.add_child(_grid_cont)
 	# Columna derecha: pasos
@@ -549,14 +580,13 @@ func iniciar(mision_idx: int, zona_node: Area2D) -> void:
 
 
 func _crear_grid_dinamico(cols: int, rows: int) -> void:
-	# Eliminar botones previos
 	for child in _grid_cont.get_children():
 		child.queue_free()
-	var cell_w := 152.0 / float(cols)
-	var cell_h := 88.0  / float(rows)
-	# Posicionar _grid_cont para que alinee con el visual del techo
-	_grid_cont.position = Vector2(160 - 76, 125 - 44)
-	_grid_cont.custom_minimum_size = Vector2(152, 88)
+	const SCALE_F : float = 1.6
+	var cell_w := 152.0 * SCALE_F / float(cols)
+	var cell_h := 88.0  * SCALE_F / float(rows)
+	_grid_cont.position = Vector2(230 - 76 * SCALE_F, 160 - 44 * SCALE_F)
+	_grid_cont.custom_minimum_size = Vector2(152 * SCALE_F, 88 * SCALE_F)
 	for r in rows:
 		for c in cols:
 			var idx := r * cols + c

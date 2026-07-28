@@ -26,6 +26,8 @@ var user_id        : String = ""
 var nombre_usuario : String = ""
 var _http          : HTTPRequest
 var _accion_actual : String = ""
+var _cola          : Array  = []   # Array[Dictionary] peticiones en espera
+var _ocupado       : bool   = false
 
 
 func _ready() -> void:
@@ -34,39 +36,51 @@ func _ready() -> void:
 	_http.request_completed.connect(_on_respuesta_http)
 
 
+func _encolar(accion: String, url: String, metodo: int,
+			  hdrs: PackedStringArray, body: String = "") -> void:
+	_cola.append({"accion": accion, "url": url, "metodo": metodo,
+				  "hdrs": hdrs, "body": body})
+	_despachar()
+
+
+func _despachar() -> void:
+	if _ocupado or _cola.is_empty():
+		return
+	_ocupado = true
+	var p : Dictionary = _cola.pop_front()
+	_accion_actual = p["accion"]
+	_http.request(p["url"], p["hdrs"], p["metodo"], p["body"])
+
+
 # ── LOGIN ─────────────────────────────────────────────────────
 func login(email: String, contrasena: String) -> void:
-	_accion_actual = "login"
-	var url  = SUPABASE_URL + "/auth/v1/token?grant_type=password"
-	var body = JSON.stringify({"email": email, "password": contrasena})
-	_http.request(url, _headers_anon(), HTTPClient.METHOD_POST, body)
+	var url  := SUPABASE_URL + "/auth/v1/token?grant_type=password"
+	var body := JSON.stringify({"email": email, "password": contrasena})
+	_encolar("login", url, HTTPClient.METHOD_POST, _headers_anon(), body)
 
 
 # ── REGISTRO ─────────────────────────────────────────────────
 func registrar(email: String, contrasena: String, meta: Dictionary) -> void:
-	_accion_actual = "registro"
-	var url  = SUPABASE_URL + "/auth/v1/signup"
-	var body = JSON.stringify({
+	var url  := SUPABASE_URL + "/auth/v1/signup"
+	var body := JSON.stringify({
 		"email"   : email,
 		"password": contrasena,
-		"data"    : meta          # nombre, cedula, carrera, semestre
+		"data"    : meta
 	})
-	_http.request(url, _headers_anon(), HTTPClient.METHOD_POST, body)
+	_encolar("registro", url, HTTPClient.METHOD_POST, _headers_anon(), body)
 
 
-# ── RECUPERAR CONTRASEÑA (envía email de reset) ───────────────
+# ── RECUPERAR CONTRASEÑA ──────────────────────────────────────
 func recuperar_contrasena(email: String) -> void:
-	_accion_actual = "recuperar"
-	var url  = SUPABASE_URL + "/auth/v1/recover"
-	var body = JSON.stringify({"email": email})
-	_http.request(url, _headers_anon(), HTTPClient.METHOD_POST, body)
+	var url  := SUPABASE_URL + "/auth/v1/recover"
+	var body := JSON.stringify({"email": email})
+	_encolar("recuperar", url, HTTPClient.METHOD_POST, _headers_anon(), body)
 
 
 # ── MÓDULOS ───────────────────────────────────────────────────
 func cargar_modulos() -> void:
-	_accion_actual = "cargar_modulos"
-	var url = SUPABASE_URL + "/rest/v1/modulos_greenmetric?order=orden_desbloqueo.asc&activo=eq.true"
-	_http.request(url, _headers_anon(), HTTPClient.METHOD_GET)
+	var url := SUPABASE_URL + "/rest/v1/modulos_greenmetric?order=orden_desbloqueo.asc&activo=eq.true"
+	_encolar("cargar_modulos", url, HTTPClient.METHOD_GET, _headers_anon())
 
 
 # ── PROGRESO ─────────────────────────────────────────────────
@@ -74,24 +88,21 @@ func cargar_progreso() -> void:
 	if jwt_token.is_empty():
 		push_error("SupabaseManager: Debes hacer login primero.")
 		return
-	_accion_actual = "cargar_progreso"
-	var url = SUPABASE_URL + "/rest/v1/progreso_estudiante?select=*"
-	_http.request(url, _headers_auth(), HTTPClient.METHOD_GET)
+	var url := SUPABASE_URL + "/rest/v1/progreso_estudiante?select=*"
+	_encolar("cargar_progreso", url, HTTPClient.METHOD_GET, _headers_auth())
 
 
 func cargar_ranking() -> void:
-	_accion_actual = "cargar_ranking"
-	var url : String = SUPABASE_URL + "/rest/v1/progreso_estudiante?select=user_id,xp_ganada,completado&order=xp_ganada.desc"
-	_http.request(url, _headers_anon(), HTTPClient.METHOD_GET)
+	var url := SUPABASE_URL + "/rest/v1/progreso_estudiante?select=user_id,xp_ganada,completado&order=xp_ganada.desc"
+	_encolar("cargar_ranking", url, HTTPClient.METHOD_GET, _headers_anon())
 
 
 func guardar_progreso(modulo_id: int, puntaje: int, xp: int, completado: bool) -> void:
 	if jwt_token.is_empty():
 		push_error("SupabaseManager: Debes hacer login primero.")
 		return
-	_accion_actual = "guardar_progreso"
-	var url  = SUPABASE_URL + "/rest/v1/progreso_estudiante"
-	var body = JSON.stringify({
+	var url  := SUPABASE_URL + "/rest/v1/progreso_estudiante"
+	var body := JSON.stringify({
 		"user_id"          : user_id,
 		"modulo_id"        : modulo_id,
 		"puntaje_obtenido" : puntaje,
@@ -100,29 +111,33 @@ func guardar_progreso(modulo_id: int, puntaje: int, xp: int, completado: bool) -
 	})
 	var hdrs := _headers_auth()
 	hdrs.append("Prefer: resolution=merge-duplicates")
-	_http.request(url, hdrs, HTTPClient.METHOD_POST, body)
+	_encolar("guardar_progreso", url, HTTPClient.METHOD_POST, hdrs, body)
 
 
 # ── MANEJADOR CENTRAL ─────────────────────────────────────────
 func _on_respuesta_http(result: int, code: int, _hdrs: PackedStringArray, body: PackedByteArray) -> void:
+	var accion := _accion_actual
+	_accion_actual = ""
+	_ocupado       = false
+
 	if result != HTTPRequest.RESULT_SUCCESS:
 		emit_signal("error_red", "Sin conexión. Código: " + str(result))
-		_accion_actual = ""
+		_despachar()
 		return
 
 	var texto := body.get_string_from_utf8()
 	var datos  = JSON.parse_string(texto)
 
-	match _accion_actual:
-		"login"          : _procesar_login(code, datos)
-		"registro"       : _procesar_registro(code, datos)
-		"recuperar"      : _procesar_recuperar(code, datos)
+	match accion:
+		"login"           : _procesar_login(code, datos)
+		"registro"        : _procesar_registro(code, datos)
+		"recuperar"       : _procesar_recuperar(code, datos)
 		"cargar_modulos"  : _procesar_modulos(code, datos)
 		"cargar_progreso" : _procesar_progreso(code, datos)
 		"guardar_progreso": _procesar_guardar(code)
 		"cargar_ranking"  : _procesar_ranking(code, datos)
 
-	_accion_actual = ""
+	_despachar()   # lanza la siguiente petición en cola si la hay
 
 
 func _procesar_login(code: int, datos: Variant) -> void:
