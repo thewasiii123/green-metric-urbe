@@ -300,8 +300,8 @@ func _draw() -> void:
 		draw_circle(a, 12, Color(0.14, 0.38, 0.14))
 		draw_circle(a - Vector2(3,3), 5, Color(0.22, 0.54, 0.18))
 
-	# ── CONTENEDORES DE RECICLAJE ────────────────────────────
-	_dibujar_contenedores(font)
+	# ── CONTENEDORES DE RECICLAJE (ahora gestionados como nodos interactivos zona_reciclaje.gd) ──
+	# _dibujar_contenedores(font)
 
 	# ── PÁJAROS AMBIENTALES ──────────────────────────────────
 	for p in _pajaros:

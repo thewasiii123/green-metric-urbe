@@ -6,11 +6,13 @@
 # ============================================================
 extends Area2D
 
-@export var mision_id     : String = "plantar_1"
-@export var nombre_zona   : String = "Jardín Norte"
-@export var indice_mision : int    = 0   # 0, 1 ó 2 → qué datos de plantación usar
+@export var mision_id        : String = "plantar_1"
+@export var nombre_zona      : String = "Jardín Norte"
+@export var indice_mision    : int    = 0
+@export var modo_interaccion : String = "click"   # "click" o "drag"
 
 signal plantar_solicitado(zona: Area2D)
+signal riego_realizado(zona: Area2D, xp: int, ec: int)
 
 const RADIO_TIERRA  : float = 34.0   # en espacio del padre (no inner class)
 const RADIO_DETEC   : float = 60.0
@@ -23,19 +25,31 @@ var _prompt_canvas  : CanvasLayer = null
 var _prompt_panel   : Panel       = null
 var _prompt_lbl     : Label       = null
 
-# Planta visual que aparece cuando la misión está completada
 var _planta_visual  : Node2D  = null
 var _info_panel     : Panel   = null
+
+# ── Sistema de riego ─────────────────────────────────────────
+const WATERING_INTERVAL : float = 600.0   # 10 min (riego cada 10 min)
+var _necesita_riego : bool  = false
+var _riego_timer    : float = 0.0
+var _agua_node      : Node2D = null        # indicador visual de gota
+var _eco_badge      : Node2D = null        # badge flotante de impacto ambiental
 
 
 class TierraVisual extends Node2D:
 	const RADIO_TIERRA = 34.0
-	var completada : bool  = false
-	var tipo_planta: String = ""
-	var _t         : float = 0.0
+	var completada  : bool   = false
+	var tipo_planta : String = ""
+	var _t          : float  = 0.0
+	var _growth_t   : float  = 1.0   # 0=recién plantado → 1=árbol adulto
+	var _riego_t    : float  = -1.0  # ≥0 → animación de agua activa
 
 	func _process(delta: float) -> void:
 		_t += delta
+		if _riego_t >= 0.0:
+			_riego_t += delta
+			if _riego_t > 1.0:
+				_riego_t = -1.0
 		queue_redraw()
 
 	func _draw() -> void:
@@ -43,6 +57,9 @@ class TierraVisual extends Node2D:
 			_draw_completada()
 		else:
 			_draw_tierra()
+
+	func disparar_riego() -> void:
+		_riego_t = 0.0
 
 	func _draw_tierra() -> void:
 		# Sombra
@@ -72,17 +89,163 @@ class TierraVisual extends Node2D:
 				 Color(0.55, 0.88, 0.25, 0.6 + 0.3 * sin(_t * 2.5)), 1.5)
 
 	func _draw_completada() -> void:
+		var sc := clampf(_growth_t, 0.001, 1.0)
+		# Escala desde el suelo: el árbol crece hacia arriba
+		draw_set_transform(Vector2(0.0, 8.0 * (1.0 - sc)), 0.0, Vector2(sc, sc))
 		_draw_planta_simple()
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# Animación de agua (aros azules expandiéndose)
+		if _riego_t >= 0.0:
+			for i in 3:
+				var d := _riego_t + float(i) * 0.28
+				if d > 1.0: continue
+				var r := d * 48.0
+				draw_arc(Vector2.ZERO, r, 0.0, TAU, 24,
+						 Color(0.25, 0.65, 0.95, (1.0 - d) * 0.8), 3.0)
 
 	func _draw_planta_simple() -> void:
-		# usa RADIO_TIERRA de esta clase (inner class const)
-		# Tronco
 		draw_rect(Rect2(-3, -6, 6, 14), Color(0.40, 0.25, 0.10))
-		# Copa (árbol genérico verde)
 		draw_circle(Vector2(0, -18), 16.0, Color(0.15, 0.62, 0.18))
 		draw_circle(Vector2(-9, -12), 11.0, Color(0.18, 0.68, 0.20))
 		draw_circle(Vector2( 9, -12), 11.0, Color(0.18, 0.68, 0.20))
 		draw_circle(Vector2(0, -26), 12.0, Color(0.22, 0.72, 0.22))
+
+class AguaIndicador extends Node2D:
+	var _t : float = 0.0
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var bob := sin(_t * 4.5) * 5.0
+		var cy  := -70.0 + bob
+		var pts := PackedVector2Array([
+			Vector2(0, cy - 16), Vector2(-8, cy),
+			Vector2(0, cy + 9),  Vector2(8, cy)
+		])
+		draw_colored_polygon(pts, Color(0.22, 0.60, 0.96, 0.92))
+		draw_circle(Vector2(-2, cy - 6), 2.5, Color(0.85, 0.93, 1.0, 0.75))
+		var a := 0.45 + 0.3 * sin(_t * 5.0)
+		draw_arc(Vector2(0, cy), 16.0, 0.0, TAU, 20, Color(0.22, 0.60, 0.96, a), 2.0)
+
+
+# ── Jardinero animado (5 fases) ───────────────────────────────
+class GardeneroVisual extends Node2D:
+	var fase        : int   = 0
+	var _t_walk     : float = 0.0
+	var _t_fase     : float = 0.0
+	var _bend       : float = 0.0
+	var _agua_t     : float = 0.0
+	const BEND_SPEED : float = 1.8
+
+	func _process(delta: float) -> void:
+		_t_walk += delta
+		_t_fase += delta
+		_agua_t += delta
+		match fase:
+			1: _bend = minf(_bend + BEND_SPEED * delta, 1.0)
+			3: _bend = maxf(_bend - BEND_SPEED * delta, 0.0)
+		queue_redraw()
+
+	func _draw() -> void:
+		var caminando : bool  = (fase == 0 or fase == 4)
+		var leg_swing : float = sin(_t_walk * 9.0) * 6.0 if caminando else 0.0
+		var B         : float = _bend * 8.0
+
+		# Sombra
+		draw_arc(Vector2(0, 16 + B * 0.3), 12.0, 0.0, PI, 10,
+				Color(0.0, 0.0, 0.0, 0.22), 4.0)
+
+		# Piernas (pantalón azul oscuro)
+		draw_line(Vector2(-4, 4 + B * 0.3), Vector2(-4 + leg_swing, 16),
+				  Color(0.12, 0.22, 0.50), 3.5)
+		draw_line(Vector2(4, 4 + B * 0.3), Vector2(4 - leg_swing, 16),
+				  Color(0.12, 0.22, 0.50), 3.5)
+		draw_circle(Vector2(-4 + leg_swing, 16), 2.5, Color(0.15, 0.15, 0.15))
+		draw_circle(Vector2(4 - leg_swing, 16), 2.5, Color(0.15, 0.15, 0.15))
+
+		# Cuerpo (camisa verde jardinero)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-7, -8 + B), Vector2(7, -8 + B),
+			Vector2(8, 5 + B * 0.5), Vector2(-8, 5 + B * 0.5)
+		]), Color(0.28, 0.68, 0.35))
+		# Franja amarilla reflectiva
+		draw_rect(Rect2(-7, -1 + B * 0.8, 14, 2.5), Color(0.92, 0.82, 0.08))
+
+		# Brazos + regadera (fases 1 y 2)
+		if fase == 1 or fase == 2:
+			var arm_ext : float = 8.0 * _bend
+			var arm_end := Vector2(9.0 + arm_ext, 2.0 + B * 0.4)
+			draw_line(Vector2(7, -4 + B), arm_end, Color(0.28, 0.68, 0.35), 3.0)
+			# Regadera: cuerpo trapezoidal
+			draw_colored_polygon(PackedVector2Array([
+				arm_end + Vector2(0, -5),  arm_end + Vector2(14, -3),
+				arm_end + Vector2(12, 5),  arm_end + Vector2(-2, 5)
+			]), Color(0.55, 0.72, 0.88))
+			# Asa
+			draw_arc(arm_end + Vector2(6, -5), 5.0, -PI * 0.5, PI * 0.5, 10,
+					 Color(0.40, 0.60, 0.80), 2.0)
+			# Pitorrete
+			var spout_end := arm_end + Vector2(22, 10)
+			draw_line(arm_end + Vector2(12, 4), spout_end, Color(0.40, 0.60, 0.80), 2.0)
+			# Brazo izquierdo quieto
+			draw_line(Vector2(-7, -5 + B), Vector2(-11, 3 + B * 0.4),
+					  Color(0.28, 0.68, 0.35), 3.0)
+			# Gotas de agua cayendo (solo fase 2)
+			if fase == 2:
+				for i in 5:
+					var dt   := fmod(_agua_t * 1.6 + float(i) * 0.22, 1.0)
+					var drop := spout_end + Vector2(-dt * 10.0, dt * 24.0)
+					draw_circle(drop, 2.2, Color(0.30, 0.68, 0.95, 1.0 - dt))
+		else:
+			# Brazos oscilando al caminar
+			var arm_s : float = -sin(_t_walk * 9.0) * 7.0 if caminando else 0.0
+			draw_line(Vector2(-7, -5 + B), Vector2(-11, 3.0 + arm_s + B * 0.4),
+					  Color(0.28, 0.68, 0.35), 3.0)
+			draw_line(Vector2(7, -5 + B), Vector2(11, 3.0 - arm_s + B * 0.4),
+					  Color(0.28, 0.68, 0.35), 3.0)
+
+		# Cabeza
+		var head_y : float = -14.0 + B * 1.15
+		draw_circle(Vector2(0, head_y), 6.5, Color(0.85, 0.68, 0.48))
+		# Sombrero de paja
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(-12, head_y - 1), Vector2(12, head_y - 1),
+			Vector2(8, head_y - 8),   Vector2(-8, head_y - 8)
+		]), Color(0.80, 0.65, 0.30))
+		draw_rect(Rect2(-13, head_y - 3, 26, 3), Color(0.72, 0.56, 0.22))
+
+
+# ── Badge flotante de impacto ambiental ───────────────────────
+class EcoBadge extends Node2D:
+	var _t : float = 0.0
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var font := ThemeDB.fallback_font
+		if not font: return
+		var bob := sin(_t * 1.8) * 1.5
+		# Fondo pill (2 líneas de texto)
+		draw_rect(Rect2(-46, -24 + bob, 94, 30), Color(0.03, 0.10, 0.05, 0.88))
+		draw_rect(Rect2(-46, -24 + bob, 94, 30), Color(0.22, 0.88, 0.30, 0.55), false, 1.5)
+		# Ícono árbol: tronco + 3 copas
+		var tx := -36.0
+		var ty  := bob - 10.0
+		draw_rect(Rect2(tx - 1.5, ty + 7, 3, 8), Color(0.52, 0.32, 0.12))
+		draw_circle(Vector2(tx, ty + 3),      5.5, Color(0.18, 0.70, 0.22))
+		draw_circle(Vector2(tx - 4.5, ty + 7), 3.8, Color(0.20, 0.68, 0.24))
+		draw_circle(Vector2(tx + 4.5, ty + 7), 3.8, Color(0.20, 0.68, 0.24))
+		# Línea 1: CO2 (verde)
+		draw_string(font, Vector2(-26, -9 + bob),
+					"CO2: -12 kg/ano",
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 9,
+					Color(0.38, 0.96, 0.42))
+		# Línea 2: temperatura (celeste)
+		draw_string(font, Vector2(-26, 3 + bob),
+					"Temp: -1.5 C",
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 9,
+					Color(0.55, 0.88, 0.96))
+
 
 func _nivel_mgr():
 	return get_node_or_null("/root/NivelManager")
@@ -97,7 +260,7 @@ func _ready() -> void:
 	body_exited.connect(_al_salir)
 	var nm = _nivel_mgr()
 	if nm and nm.mision_completada_q(1, mision_id):
-		_marcar_completada()
+		_marcar_completada(false)   # ya estaba plantada — sin animación
 
 
 func _crear_collision() -> void:
@@ -204,9 +367,15 @@ func _crear_prompt() -> void:
 	ip_vb.add_child(ip_btn)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# ── Timer de riego ────────────────────────────────────────
+	if _completada and not _necesita_riego:
+		_riego_timer += delta
+		if _riego_timer >= WATERING_INTERVAL:
+			_activar_necesidad_riego()
+
+	# ── Posición del prompt en pantalla ───────────────────────
 	if not _prompt_panel.visible: return
-	# Posición sobre la zona (en pantalla, no en mundo)
 	var cam := get_viewport().get_camera_2d()
 	if not cam: return
 	var gp := global_position + Vector2(-100, -80)
@@ -221,14 +390,22 @@ func _process(_delta: float) -> void:
 func _al_entrar(body: Node) -> void:
 	if not body.is_in_group("jugador"): return
 	_jugador_cerca = true
-	if _completada:
-		_prompt_lbl.text = "✅ [E]  Ver árbol plantado — %s" % nombre_zona
-	else:
-		_prompt_lbl.text = "🌱 [E]  Plantar en %s" % nombre_zona
+	_actualizar_texto_prompt()
 	_prompt_panel.modulate.a = 0.0
 	_prompt_panel.visible    = true
 	var tw := create_tween()
 	tw.tween_property(_prompt_panel, "modulate:a", 1.0, 0.20)
+
+
+func _actualizar_texto_prompt() -> void:
+	if _completada:
+		if _necesita_riego:
+			_prompt_lbl.text = "💧 [E]  Regar la planta — %s" % nombre_zona
+		else:
+			_prompt_lbl.text = "✅ [E]  Ver árbol plantado — %s" % nombre_zona
+	else:
+		var icono := "🖐" if modo_interaccion == "drag" else "🌱"
+		_prompt_lbl.text = "%s [E]  Plantar en %s" % [icono, nombre_zona]
 
 
 func _al_salir(body: Node) -> void:
@@ -246,7 +423,10 @@ func _al_salir(body: Node) -> void:
 func intentar_interactuar() -> void:
 	if not _jugador_cerca: return
 	if _completada:
-		_mostrar_info_completada()
+		if _necesita_riego:
+			_regar_planta()
+		else:
+			_mostrar_info_completada()
 		return
 	_prompt_panel.visible = false
 	plantar_solicitado.emit(self)
@@ -267,8 +447,88 @@ func _cerrar_info_panel() -> void:
 	tw.tween_callback(func(): _info_panel.visible = false)
 
 
-func _marcar_completada() -> void:
+func _marcar_completada(animar : bool = true) -> void:
 	_completada = true
-	if is_instance_valid(_planta_visual):
-		(_planta_visual as TierraVisual).completada = true
 	_prompt_panel.visible = false
+	if not is_instance_valid(_planta_visual): return
+	var tv := _planta_visual as TierraVisual
+	tv.completada = true
+	if animar:
+		tv._growth_t = 0.0
+		_riego_timer = randf() * WATERING_INTERVAL * 0.4
+		var tw := create_tween()
+		tw.tween_property(tv, "_growth_t", 1.0, 3.5)
+		tw.tween_callback(_crear_eco_badge)
+	else:
+		tv._growth_t = 1.0
+		_crear_eco_badge()
+
+
+func _crear_eco_badge() -> void:
+	if is_instance_valid(_eco_badge): return
+	_eco_badge = EcoBadge.new()
+	_eco_badge.position = Vector2(0, -52)
+	_eco_badge.z_index  = 3
+	_eco_badge.modulate.a = 0.0
+	add_child(_eco_badge)
+	var tw := create_tween()
+	tw.tween_property(_eco_badge, "modulate:a", 0.90, 0.8)
+
+
+func _activar_necesidad_riego() -> void:
+	_necesita_riego = true
+	if not is_instance_valid(_agua_node):
+		_agua_node = AguaIndicador.new()
+		_agua_node.z_index = 2
+		add_child(_agua_node)
+	if _jugador_cerca:
+		_actualizar_texto_prompt()
+
+
+func _regar_planta() -> void:
+	_necesita_riego = false
+	_riego_timer    = 0.0
+	if is_instance_valid(_agua_node):
+		_agua_node.queue_free()
+		_agua_node = null
+	_iniciar_animacion_riego()
+	var em = get_node_or_null("/root/EconomiaManager")
+	if em:
+		em.ganar_creditos(8)
+	riego_realizado.emit(self, 10, 8)
+	if _jugador_cerca:
+		_actualizar_texto_prompt()
+
+
+func _iniciar_animacion_riego() -> void:
+	var g := GardeneroVisual.new()
+	g.position = position + Vector2(-120, 0)
+	g.z_index  = 3
+	get_parent().add_child(g)
+
+	var tv_ref := _planta_visual
+
+	var tw := get_tree().create_tween()
+	# Fase 0 → camina hacia la planta (2.0 s)
+	tw.tween_property(g, "position", position + Vector2(-22, 10), 2.0)
+	# Fase 1 → se prepara, dobla brazo con regadera (0.5 s)
+	tw.tween_callback(func(): g.fase = 1)
+	tw.tween_interval(0.5)
+	# Fase 2 → riega (2.0 s), dispara aros de agua en la planta
+	tw.tween_callback(func():
+		g.fase = 2
+		if is_instance_valid(tv_ref):
+			(tv_ref as TierraVisual).disparar_riego()
+	)
+	tw.tween_interval(2.0)
+	# Fase 3 → se incorpora (0.5 s)
+	tw.tween_callback(func(): g.fase = 3)
+	tw.tween_interval(0.5)
+	# Fase 4 → se retira caminando y se desvanece (2.0 s)
+	tw.tween_callback(func(): g.fase = 4)
+	tw.tween_property(g, "position", position + Vector2(-140, 0), 2.0)
+	tw.tween_property(g, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(func():
+		if is_instance_valid(g):
+			g.queue_free()
+	)

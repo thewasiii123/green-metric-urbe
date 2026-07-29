@@ -196,6 +196,24 @@ const PASO_BTNS : Array[String] = [
 	"  💧  ¡Regar!  ",
 ]
 
+# ── Constantes modo drag ──────────────────────────────────────
+const PASO_DRAG_UMBRAL : Array[float] = [180.0, 1.0, 220.0]
+const PASO_TITULOS_DRAG : Array[String] = [
+	"Paso 1/3 — 🖐  Rasca para cavar",
+	"Paso 2/3 — 🌿  Coloca el árbol",
+	"Paso 3/3 — 💧  Frota para regar",
+]
+const PASO_DESCS_DRAG : Array[String] = [
+	"Mantén el clic y frota el mouse sobre la tierra para cavar",
+	"Haz clic en el botón para colocar el árbol en el hueco",
+	"Mantén el clic y frota para regar — ¡mira cómo crece!",
+]
+const PASO_BTNS_DRAG : Array[String] = [
+	"  🖐  Frota aquí  ",
+	"  🌿  ¡Plantar!  ",
+	"  💧  Frota aquí  ",
+]
+
 # ── Estado ───────────────────────────────────────────────────
 var _mision_idx     : int    = 0
 var _mision_id      : String = ""
@@ -204,6 +222,9 @@ var _zona_ref       : Area2D = null
 var _planta_elegida : String = ""
 var _paso_actual    : int    = 0
 var _paso_progreso  : int    = 0
+var _modo           : String = "click"   # "click" o "drag"
+var _drag_pressed   : bool   = false
+var _drag_acum      : float  = 0.0      # distancia acumulada de arrastre
 
 # ── Nodos UI — fase 1 (selección) ────────────────────────────
 var _panel_root     : Panel         = null
@@ -227,6 +248,8 @@ var _plant_visual_node: Node2D     = null
 var _paso_desc_lbl    : Label      = null
 var _prog_bar         : ProgressBar = null
 var _plant_btn        : Button     = null
+var _drag_area        : Panel      = null   # área de frotado (modo drag)
+var _drag_area_lbl    : Label      = null
 
 # ── Inner class: ilustración de planta ───────────────────────
 class PlantaVisual extends Node2D:
@@ -607,13 +630,16 @@ func _ready() -> void:
 	hide()
 
 
-func iniciar(indice: int, zona_node: Area2D) -> void:
+func iniciar(indice: int, zona_node: Area2D, modo: String = "click") -> void:
 	_mision_idx     = clampi(indice, 0, MISIONES.size() - 1)
 	_zona_ref       = zona_node
+	_modo           = modo
 	_seleccion_ok   = false
 	_planta_elegida = ""
 	_paso_actual    = 0
 	_paso_progreso  = 0
+	_drag_pressed   = false
+	_drag_acum      = 0.0
 	_feedback_panel.visible = false
 	if is_instance_valid(_plant_panel):
 		_plant_panel.visible = false
@@ -624,8 +650,9 @@ func iniciar(indice: int, zona_node: Area2D) -> void:
 	show()
 	var hb = get_tree().get_first_node_in_group("hint_bubble")
 	if hb:
-		hb.push("primer_plantar",
-			"🌱 Elige la planta correcta para esta zona según los criterios de sostenibilidad.")
+		var msg := "🌱 Elige la planta correcta para esta zona." if modo == "click" \
+			else "🖐 ¡Zona de área verde! Elegirás la planta y luego frotarás el mouse para plantarla."
+		hb.push("primer_plantar", msg)
 
 
 # ── Poblar con datos del mision_idx actual ───────────────────
@@ -1098,10 +1125,55 @@ func _crear_panel_plantacion() -> void:
 	_plant_btn.pressed.connect(_on_plantar_btn)
 	vb.add_child(_plant_btn)
 
+	# ── Área de frotado (modo drag) ────────────────────────────
+	_drag_area = Panel.new()
+	_drag_area.custom_minimum_size   = Vector2(340, 52)
+	_drag_area.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_drag_area.mouse_default_cursor_shape = Control.CURSOR_CROSS
+	_drag_area.visible = false
+	var da_st := StyleBoxFlat.new()
+	da_st.bg_color     = Color(0.30, 0.18, 0.06, 0.90)
+	da_st.border_color = Color(0.65, 0.42, 0.18)
+	da_st.set_border_width_all(2)
+	da_st.set_corner_radius_all(12)
+	_drag_area.add_theme_stylebox_override("panel", da_st)
+	_drag_area.gui_input.connect(_on_drag_area_input)
+	vb.add_child(_drag_area)
+
+	_drag_area_lbl = Label.new()
+	_drag_area_lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_drag_area_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_drag_area_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	_drag_area_lbl.add_theme_font_size_override("font_size", 16)
+	_drag_area_lbl.add_theme_color_override("font_color", Color(0.95, 0.80, 0.45))
+	_drag_area_lbl.text = "  🖐  Frota aquí  "
+	_drag_area.add_child(_drag_area_lbl)
+
+
+func _on_drag_area_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var ev := event as InputEventMouseButton
+		_drag_pressed = ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT
+	elif event is InputEventMouseMotion and _drag_pressed:
+		var ev   := event as InputEventMouseMotion
+		var dist : float = ev.relative.length()
+		_drag_acum += dist
+		var umbral : float = PASO_DRAG_UMBRAL[_paso_actual]
+		var pct    : float = clampf(_drag_acum / umbral, 0.0, 1.0)
+		if is_instance_valid(_plant_visual_node):
+			(_plant_visual_node as PlantacionVisual).progreso = pct
+		_prog_bar.value = _drag_acum
+		if _drag_acum >= umbral:
+			_drag_acum = 0.0
+			_drag_pressed = false
+			_avanzar_paso()
+
 
 func _iniciar_plantacion() -> void:
 	_paso_actual   = 0
 	_paso_progreso = 0
+	_drag_pressed  = false
+	_drag_acum     = 0.0
 	if is_instance_valid(_plant_visual_node):
 		var pv := _plant_visual_node as PlantacionVisual
 		pv.paso        = 0
@@ -1118,11 +1190,42 @@ func _iniciar_plantacion() -> void:
 
 
 func _actualizar_paso_ui() -> void:
-	_plant_title_lbl.text = PASO_TITULOS[_paso_actual]
-	_paso_desc_lbl.text   = PASO_DESCS[_paso_actual]
-	_plant_btn.text       = PASO_BTNS[_paso_actual]
-	_prog_bar.max_value   = float(PASO_CLICKS[_paso_actual])
-	_prog_bar.value       = 0.0
+	_drag_pressed = false
+	_drag_acum    = 0.0
+	if _modo == "drag":
+		_plant_title_lbl.text = PASO_TITULOS_DRAG[_paso_actual]
+		_paso_desc_lbl.text   = PASO_DESCS_DRAG[_paso_actual]
+		_prog_bar.max_value   = PASO_DRAG_UMBRAL[_paso_actual]
+		_prog_bar.value       = 0.0
+		# Paso 2 siempre usa botón; pasos 1 y 3 usan área drag
+		var es_drag_step := (_paso_actual != 1)
+		_drag_area.visible = es_drag_step
+		_plant_btn.visible = not es_drag_step
+		if es_drag_step:
+			_drag_area_lbl.text = PASO_BTNS_DRAG[_paso_actual]
+			# Color según el paso
+			var da_st := StyleBoxFlat.new()
+			da_st.set_corner_radius_all(12)
+			da_st.set_border_width_all(2)
+			if _paso_actual == 0:   # cavar → marrón tierra
+				da_st.bg_color     = Color(0.30, 0.18, 0.06, 0.90)
+				da_st.border_color = Color(0.65, 0.42, 0.18)
+				_drag_area_lbl.add_theme_color_override("font_color", Color(0.95, 0.80, 0.45))
+			else:                   # regar → azul agua (paso 2)
+				da_st.bg_color     = Color(0.04, 0.18, 0.32, 0.90)
+				da_st.border_color = Color(0.22, 0.60, 0.90)
+				_drag_area_lbl.add_theme_color_override("font_color", Color(0.55, 0.88, 1.0))
+			_drag_area.add_theme_stylebox_override("panel", da_st)
+		else:
+			_plant_btn.text = PASO_BTNS[1]
+	else:
+		_plant_title_lbl.text = PASO_TITULOS[_paso_actual]
+		_paso_desc_lbl.text   = PASO_DESCS[_paso_actual]
+		_plant_btn.text       = PASO_BTNS[_paso_actual]
+		_prog_bar.max_value   = float(PASO_CLICKS[_paso_actual])
+		_prog_bar.value       = 0.0
+		_drag_area.visible    = false
+		_plant_btn.visible    = true
 
 
 func _on_plantar_btn() -> void:

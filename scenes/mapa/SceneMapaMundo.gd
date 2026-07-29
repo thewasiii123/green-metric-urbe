@@ -76,7 +76,7 @@ var DATOS_NPCS : Array = [
 		"nombre":    "Prof. González",
 		"mision_id": "mision_bloque_a",
 		"tipo":      "prof_h",
-		"pos":       Vector2(380, 660),   # pasillo BloqueC/B↔BloqueA (y=640..680)
+		"pos":       Vector2(440, 660),   # pasillo BloqueC/B↔BloqueA
 		"color":     Color(0.9, 0.45, 0.0),
 		"dialogos":  PackedStringArray([
 			"Hola! Soy el Prof. Gonzalez, docente del Bloque A.",
@@ -89,7 +89,7 @@ var DATOS_NPCS : Array = [
 		"nombre":    "Dr. Pérez",
 		"mision_id": "mision_bloque_b",
 		"tipo":      "prof_h",
-		"pos":       Vector2(550, 652),   # corredor sur BloqueB, accesible
+		"pos":       Vector2(570, 660),   # corredor sur BloqueB
 		"color":     Color(0.85, 0.35, 0.0),
 		"dialogos":  PackedStringArray([
 			"Doctor Perez, coordinador de Energia y Cambio Climatico.",
@@ -102,7 +102,7 @@ var DATOS_NPCS : Array = [
 		"nombre":    "Ing. Herrera",
 		"mision_id": "mision_bloque_c",
 		"tipo":      "prof_m",
-		"pos":       Vector2(380, 500),   # pasillo BloqueD↔BloqueC (y=480..520)
+		"pos":       Vector2(440, 500),   # pasillo BloqueD↔BloqueC
 		"color":     Color(0.95, 0.55, 0.0),
 		"dialogos":  PackedStringArray([
 			"Buenas! Soy la Ing. Herrera, tecnica del Bloque C.",
@@ -115,7 +115,7 @@ var DATOS_NPCS : Array = [
 		"nombre":    "Técn. Ruiz",
 		"mision_id": "mision_bloque_d",
 		"tipo":      "prof_h",
-		"pos":       Vector2(380, 300),   # pasillo Cafetín↔BloqueD (y=280..320)
+		"pos":       Vector2(440, 300),   # pasillo Cafetín↔BloqueD
 		"color":     Color(0.80, 0.40, 0.0),
 		"dialogos":  PackedStringArray([
 			"Hola! Soy el Tecn. Ruiz, responsable de instalaciones del Bloque D.",
@@ -369,6 +369,8 @@ var _zona_icono_lbl  : Label       = null
 var _zona_nombre_lbl : Label       = null
 var _zona_hint_lbl   : Label       = null
 var _celebracion_lbl : Label       = null
+var _hud_verde_fill  : ColorRect   = null
+var _hud_verde_lbl   : Label       = null
 
 # ── Sidebar de módulos ────────────────────────────────────────
 var _sidebar_fills  : Array = []   # Array[ColorRect]
@@ -511,7 +513,7 @@ func _construir_hud() -> void:
 	var panel_top := Panel.new()
 	panel_top.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	panel_top.offset_right  = 310.0
-	panel_top.offset_bottom = 78.0
+	panel_top.offset_bottom = 96.0
 	var ps := StyleBoxFlat.new()
 	ps.bg_color     = Color(0.04, 0.07, 0.10, 0.92)
 	ps.border_color = Color(0.20, 0.68, 0.20)
@@ -597,6 +599,26 @@ func _construir_hud() -> void:
 	_celebracion_lbl.add_theme_color_override("font_color", Color(0.95, 0.80, 0.10))
 	_celebracion_lbl.visible = false
 	_hud_canvas.add_child(_celebracion_lbl)
+
+	# ── Índice Verde (barra de progreso nivel 1) ─────────────
+	var verde_bg := ColorRect.new()
+	verde_bg.position = Vector2(10, 80)
+	verde_bg.size     = Vector2(236, 12)
+	verde_bg.color    = Color(0.06, 0.14, 0.08)
+	_hud_canvas.add_child(verde_bg)
+
+	_hud_verde_fill = ColorRect.new()
+	_hud_verde_fill.position = Vector2(10, 80)
+	_hud_verde_fill.size     = Vector2(0, 12)
+	_hud_verde_fill.color    = Color(0.22, 0.82, 0.28)
+	_hud_canvas.add_child(_hud_verde_fill)
+
+	_hud_verde_lbl = Label.new()
+	_hud_verde_lbl.position = Vector2(10, 92)
+	_hud_verde_lbl.add_theme_font_size_override("font_size", 9)
+	_hud_verde_lbl.add_theme_color_override("font_color", Color(0.55, 0.95, 0.55))
+	_hud_verde_lbl.text = "🌿 Índice Verde: 0%"
+	_hud_canvas.add_child(_hud_verde_lbl)
 
 
 func _spawn_npcs() -> void:
@@ -1690,15 +1712,8 @@ const DATOS_CONTENEDORES : Array = [
 ]
 
 func _spawn_contenedores() -> void:
-	for dato : Dictionary in DATOS_CONTENEDORES:
-		var c := CONTENEDOR_ESCENA.new()
-		c.nombre_bin = dato["nombre"]
-		c.position   = dato["pos"]
-		c.z_index    = 2
-		add_child(c)
-		c.vaciado.connect(_on_contenedor_vaciado.bind(c))
-		_contenedores.append(c)
-	print("🗑 %d contenedores instanciados" % _contenedores.size())
+	# Sistema de contenedores grandes retirado para mantener únicamente las papeleras de colores de reciclaje
+	return
 
 
 func _construir_panel_contenedor() -> void:
@@ -1899,64 +1914,51 @@ func _on_insignia_obtenida(_id: String, nombre: String, icono: String) -> void:
 # ════════════════════════════════════════════════════════════
 
 const DATOS_ZONAS_TIERRA : Array = [
-	# Corredor Oeste — franja verde accesible entre Estacionamiento y BloqueD
-	{"id": "plantar_corredores", "nombre": "Corredor Principal",   "indice": 0,
-	 "pos": Vector2(250, 390)},
-	# Pasillo Central — corredor central entre bloques, fuera del Rectorado (x=740-1060, y=480-660)
-	{"id": "plantar_rectorado",  "nombre": "Jardín del Rectorado", "indice": 1,
-	 "pos": Vector2(660, 455)},
-	# Patio Central — zona abierta central del campus
-	{"id": "plantar_patio",      "nombre": "Patio Central",        "indice": 2,
-	 "pos": Vector2(640, 300)},
-	# Camino Norte — franja norte, fuera del lago (y>80) y del Estacionamiento (y<120)
-	{"id": "plantar_norte",      "nombre": "Camino Norte",         "indice": 3,
+	# ── Plaza central (interacción clic) ──────────────────────
+	{"id": "plantar_rectorado",  "nombre": "Jardín del Rectorado", "indice": 1, "modo": "click",
+	 "pos": Vector2(680, 410)},
+	{"id": "plantar_patio",      "nombre": "Patio Central",        "indice": 2, "modo": "click",
+	 "pos": Vector2(640, 260)},
+	{"id": "plantar_este",       "nombre": "Corredor Central",     "indice": 5, "modo": "click",
+	 "pos": Vector2(530, 370)},
+	# ── Áreas verdes (interacción frotando) ───────────────────
+	{"id": "plantar_corredores", "nombre": "Corredor Principal",   "indice": 0, "modo": "drag",
+	 "pos": Vector2(250, 200)},
+	{"id": "plantar_norte",      "nombre": "Camino Norte",         "indice": 3, "modo": "drag",
 	 "pos": Vector2(160, 110)},
-	# Este del Cafetín — fuera del Cafetín (x=280-480), en el corredor central norte
-	{"id": "plantar_cafetín",    "nombre": "Norte del Cafetín",    "indice": 4,
-	 "pos": Vector2(545, 215)},
-	# Corredor Central — zona abierta entre Cafetín, Bloque D y Bloque B
-	{"id": "plantar_este",       "nombre": "Corredor Central",     "indice": 5,
-	 "pos": Vector2(500, 360)},
-	# Zona Sur — centro sur del campus, lejos de NPC(550,652) y contenedor(870,705)
-	{"id": "plantar_sur",        "nombre": "Zona Sur del Campus",  "indice": 6,
-	 "pos": Vector2(700, 650)},
-	# Sur del Estacionamiento — fuera del Estacionamiento (x>220, y>540)
-	{"id": "plantar_oeste",      "nombre": "Corredor Oeste Sur",   "indice": 7,
-	 "pos": Vector2(255, 545)},
+	{"id": "plantar_oeste",      "nombre": "Corredor Oeste Sur",   "indice": 7, "modo": "drag",
+	 "pos": Vector2(250, 640)},
 ]
 
 const DATOS_PUNTOS_ENERGIA : Array = [
-	# Misiones LED (interior navegable)
+	# Misiones LED (entradas de los bloques en pasillos transitables, separadas >100px de los NPCs)
 	{"id": "led_bloque_a", "nombre": "Bloque A", "tipo": "led", "indice_bloque": 0,
-	 "pos": Vector2(415, 668)},
+	 "pos": Vector2(310, 660)},
 	{"id": "led_bloque_b", "nombre": "Bloque B", "tipo": "led", "indice_bloque": 1,
-	 "pos": Vector2(555, 504)},
+	 "pos": Vector2(680, 660)},
 	{"id": "led_bloque_c", "nombre": "Bloque C", "tipo": "led", "indice_bloque": 2,
-	 "pos": Vector2(390, 498)},
-	# Bloque D — Administración, separado del NPC(380,300)
+	 "pos": Vector2(310, 500)},
 	{"id": "led_bloque_d", "nombre": "Bloque D", "tipo": "led", "indice_bloque": 3,
-	 "pos": Vector2(450, 295)},
-	# Bloque E — Computación, separado del contenedor(640,170) y NPC(600,170)
+	 "pos": Vector2(310, 300)},
 	{"id": "led_bloque_e", "nombre": "Bloque E", "tipo": "led", "indice_bloque": 4,
-	 "pos": Vector2(720, 180)},
-	# Bloque F — Estudios a Distancia, separado de NPC(1100,250) y NPC(1100,400)
+	 "pos": Vector2(685, 270)},
 	{"id": "led_bloque_f", "nombre": "Bloque F", "tipo": "led", "indice_bloque": 5,
-	 "pos": Vector2(1150, 310)},
+	 "pos": Vector2(1100, 330)},
 	# Misiones de paneles solares
 	{"id": "solar_rectorado",       "nombre": "Rectorado",      "tipo": "solar", "indice_mision": 0,
-	 "pos": Vector2(858, 466)},
+	 "pos": Vector2(900, 450)},
 	{"id": "solar_estacionamiento", "nombre": "Estacionamiento","tipo": "solar", "indice_mision": 1,
-	 "pos": Vector2(210, 618)},
+	 "pos": Vector2(250, 670)},
 ]
 
 
 const DATOS_ZONAS_RECICLAJE : Array = [
-	{"id": "reciclar_corredor_n", "nombre": "Corredor Norte",      "pos": Vector2(420, 330)},
-	{"id": "reciclar_patio_e",    "nombre": "Patio Este",          "pos": Vector2(640, 445)},
-	{"id": "reciclar_bloque_e",   "nombre": "Frente al Bloque E",  "pos": Vector2(620, 200)},
-	{"id": "reciclar_oeste",      "nombre": "Corredor Oeste",      "pos": Vector2(180, 420)},
-	{"id": "reciclar_sur",        "nombre": "Zona Sur Campus",     "pos": Vector2(580, 720)},
-	{"id": "reciclar_este",       "nombre": "Est. a Distancia",    "pos": Vector2(1250, 430)},
+	{"id": "reciclar_corredor_n", "nombre": "Corredor Norte",      "pos": Vector2(440, 95)},
+	{"id": "reciclar_patio_e",    "nombre": "Patio Este",          "pos": Vector2(660, 450)},
+	{"id": "reciclar_bloque_e",   "nombre": "Frente al Bloque E",  "pos": Vector2(685, 170)},
+	{"id": "reciclar_oeste",      "nombre": "Corredor Oeste",      "pos": Vector2(250, 480)},
+	{"id": "reciclar_sur",        "nombre": "Zona Sur Campus",     "pos": Vector2(750, 660)},
+	{"id": "reciclar_este",       "nombre": "Est. a Distancia",    "pos": Vector2(1100, 520)},
 ]
 
 
@@ -1999,13 +2001,16 @@ func _spawn_zonas_tierra() -> void:
 		return
 	for dato : Dictionary in DATOS_ZONAS_TIERRA:
 		var zt := ZONA_TIERRA_ESCENA.new()
-		zt.set("mision_id",     dato["id"])
-		zt.set("nombre_zona",   dato["nombre"])
-		zt.set("indice_mision", dato["indice"])
+		zt.set("mision_id",        dato["id"])
+		zt.set("nombre_zona",      dato["nombre"])
+		zt.set("indice_mision",    dato["indice"])
+		zt.set("modo_interaccion", dato.get("modo", "click"))
 		zt.position = dato["pos"]
 		zt.z_index  = 1
 		add_child(zt)
 		zt.plantar_solicitado.connect(_on_plantar_solicitado)
+		if zt.has_signal("riego_realizado"):
+			zt.riego_realizado.connect(_on_riego_realizado)
 
 
 func _spawn_puntos_energia() -> void:
@@ -2013,6 +2018,12 @@ func _spawn_puntos_energia() -> void:
 	if not nm or not nm.nivel_desbloqueado(2):
 		return
 	for dato : Dictionary in DATOS_PUNTOS_ENERGIA:
+		var existe := false
+		for child in get_children():
+			if child.get("mision_id") == dato["id"]:
+				existe = true
+				break
+		if existe: continue
 		var pe := PUNTO_ENERGIA_ESCENA.new()
 		pe.set("mision_id",    dato["id"])
 		pe.set("nombre_punto", dato["nombre"])
@@ -2032,6 +2043,12 @@ func _spawn_zonas_reciclaje() -> void:
 	if not nm or not nm.nivel_desbloqueado(3):
 		return
 	for dato : Dictionary in DATOS_ZONAS_RECICLAJE:
+		var existe := false
+		for child in get_children():
+			if child.get("mision_id") == dato["id"]:
+				existe = true
+				break
+		if existe: continue
 		var zr := ZONA_RECICLAJE_ESCENA.new()
 		zr.set("mision_id",   dato["id"])
 		zr.set("nombre_zona", dato["nombre"])
@@ -2039,14 +2056,32 @@ func _spawn_zonas_reciclaje() -> void:
 		zr.z_index  = 1
 		add_child(zr)
 		zr.reciclar_solicitado.connect(_on_reciclar_solicitado)
+		if zr.has_signal("vaciado_servicio"):
+			zr.vaciado_servicio.connect(_on_papelera_vaciada.bind(zr))
+
+
+func _on_papelera_vaciada(xp: int, ec: int, zr: Node2D) -> void:
+	var m_id : String = zr.get("mision_id") if zr.get("mision_id") != null else "papelera"
+	_aplicar_xp(xp, "servicio_%s" % m_id)
+	EconomiaManager.ganar_creditos(ec)
+	_mostrar_notificacion_zona("🧹", "¡Papelera vaciada por el servicio! +%d XP +%d EC" % [xp, ec], Color(0.22, 0.90, 0.28))
+	_sfx("mision")
+
+
+func _on_riego_realizado(zona: Area2D, xp: int, ec: int) -> void:
+	var m_id : String = zona.get("mision_id") if zona.get("mision_id") != null else "planta"
+	_aplicar_xp(xp, "riego_%s" % m_id)
+	_mostrar_notificacion_zona("💧", "¡Planta regada! +%d XP  +%d EC" % [xp, ec], Color(0.28, 0.68, 0.95))
+	_sfx("mision")
 
 
 # ── Callbacks de interacción ──────────────────────────────────
 
 func _on_plantar_solicitado(zona: Area2D) -> void:
 	if not is_instance_valid(_plantar_ui): return
-	var indice : int = zona.get("indice_mision")
-	_plantar_ui.call("iniciar", indice, zona)
+	var indice : int    = zona.get("indice_mision")
+	var modo   : String = zona.get("modo_interaccion") if zona.get("modo_interaccion") != null else "click"
+	_plantar_ui.call("iniciar", indice, zona, modo)
 
 
 func _on_reciclar_solicitado(zona: Area2D) -> void:
@@ -2077,10 +2112,22 @@ func _on_mision_plantar_completada(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(1) if nm else 0.0
 	_progreso_modulos[1] = pct
 	_actualizar_sidebar()
+	_actualizar_indicador_verde()
 	SupabaseManager.guardar_progreso(1, xp, int(pct * 100), nm.nivel_completo(1) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🌿 Plantación completada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
+func _actualizar_indicador_verde() -> void:
+	var nm = _nivel_mgr()
+	if not nm: return
+	var pct : float = nm.pct_nivel(1)
+	if _hud_verde_fill:
+		var tw := create_tween()
+		tw.tween_property(_hud_verde_fill, "size:x", 236.0 * pct, 0.4)
+	if _hud_verde_lbl:
+		_hud_verde_lbl.text = "🌿 Índice Verde: %.0f%%" % (pct * 100.0)
 
 
 func _on_interior_completado(mision_id: String, xp: int, ec: int) -> void:
@@ -2133,4 +2180,6 @@ func _on_nivel_greenmetric_completado(nivel: int) -> void:
 	var sig_nivel := nivel + 1
 	if sig_nivel == 2 and nm and nm.nivel_desbloqueado(2):
 		_spawn_puntos_energia()
+	elif sig_nivel == 3 and nm and nm.nivel_desbloqueado(3):
+		_spawn_zonas_reciclaje()
 	print("%s Nivel GreenMetric %d completado! Desbloqueando nivel %d…" % [icono, nivel, sig_nivel])

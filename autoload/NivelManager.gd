@@ -27,7 +27,7 @@ const ICONOS_NIVEL : Array[String] = [
 
 # Cuántas misiones de campo tiene cada nivel
 const TOTAL_MISIONES : Dictionary = {
-	1: 8,   # 8 zonas de plantación
+	1: 6,   # 3 zonas click (plaza) + 3 zonas drag (áreas verdes)
 	2: 8,   # 6 LED + 2 paneles solares
 	3: 6,   # 6 puntos de donación y reciclaje
 	4: 0, 5: 0, 6: 0
