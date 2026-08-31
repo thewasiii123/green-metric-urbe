@@ -836,46 +836,29 @@ func _input(event: InputEvent) -> void:
 		_cerrar_panel_contenedor()
 		get_viewport().set_input_as_handled()
 		return
-	# ── Nivel 1: zonas de plantación ────────────────────────────
-	for zt in get_tree().get_nodes_in_group("zona_tierra"):
-		if zt.get("_jugador_cerca"):
-			zt.intentar_interactuar()
-			get_viewport().set_input_as_handled()
-			return
-	# ── Nivel 2: puntos críticos de energía ──────────────────────
-	for pe in get_tree().get_nodes_in_group("punto_energia"):
-		if pe.get("_jugador_cerca"):
-			pe.intentar_interactuar()
-			get_viewport().set_input_as_handled()
-			return
-	# ── Nivel 3: puntos de donación y reciclaje ───────────────────
-	for zr in get_tree().get_nodes_in_group("zona_reciclaje"):
-		if zr.get("_jugador_cerca"):
-			zr.intentar_interactuar()
-			get_viewport().set_input_as_handled()
-			return
-	# ── Nivel 4: llaves abiertas y captación de agua ──────────────
-	for la in get_tree().get_nodes_in_group("llave_agua"):
-		if la.get("_jugador_cerca"):
-			la.intentar_interactuar()
-			get_viewport().set_input_as_handled()
-			return
-	for pc in get_tree().get_nodes_in_group("punto_captacion"):
-		if pc.get("_jugador_cerca"):
-			pc.intentar_interactuar()
-			get_viewport().set_input_as_handled()
-			return
-	# ── Nivel 5: oficina de movilidad y bicicleteros ──────────────
-	for om in get_tree().get_nodes_in_group("oficina_movilidad"):
-		if om.get("_jugador_cerca"):
-			om.intentar_interactuar()
-			get_viewport().set_input_as_handled()
-			return
-	for pb in get_tree().get_nodes_in_group("punto_bicicletero"):
-		if pb.get("_jugador_cerca"):
-			pb.intentar_interactuar()
-			get_viewport().set_input_as_handled()
-			return
+	# ── Misiones de todos los niveles: elige la MÁS CERCANA, no la
+	# de mayor prioridad de grupo. Antes, si dos misiones de distinto
+	# nivel quedaban cerca una de otra, siempre ganaba la del grupo
+	# revisado primero (Nivel 1 > 2 > 3 > 4 > 5) sin importar cuál
+	# tenías más cerca — eso dejaba misiones inalcanzables cuando
+	# coincidían en el mapa. Ahora se compara distancia real. ─────
+	const GRUPOS_MISION : Array[String] = [
+		"zona_tierra", "punto_energia", "zona_reciclaje",
+		"llave_agua", "punto_captacion", "oficina_movilidad", "punto_bicicletero",
+	]
+	var candidato      : Node  = null
+	var candidato_dist : float = INF
+	for grupo in GRUPOS_MISION:
+		for nodo in get_tree().get_nodes_in_group(grupo):
+			if not nodo.get("_jugador_cerca"): continue
+			var d : float = jugador.global_position.distance_to((nodo as Node2D).global_position)
+			if d < candidato_dist:
+				candidato_dist = d
+				candidato = nodo
+	if candidato:
+		candidato.call("intentar_interactuar")
+		get_viewport().set_input_as_handled()
+		return
 	# ── Sin misión de nivel: contenedores y zonas verdes ─────────
 	_verificar_contenedor_cercano()
 	_verificar_zona_verde_cercana()
@@ -2016,59 +1999,42 @@ const DATOS_ZONAS_RECICLAJE : Array = [
 ]
 
 
-# NOTA sobre posiciones: verificadas contra los rectángulos de colisión
-# reales de EDIFICIOS en colision_tilemap.gd (no son una estimación visual).
-# Se abrió el juego, se confirmó que 3 de las 8 posiciones originales caían
-# literalmente dentro de un edificio (Bloque D, Bloque C y Bloque E), y se
-# recalcularon usando los mismos huecos de corredor que ya usan los puntos
-# LED/reciclaje existentes, comprobados como transitables.
+# NOTA sobre posiciones — 2ª revisión: la primera verificación (Nivel 4)
+# solo comprobaba contra los rectángulos de EDIFICIOS, no contra los otros
+# ~30 puntos de misión ya existentes en el mapa. Jugando se detectaron
+# solapamientos reales (radios de detección que se cruzan) entre puntos
+# de niveles distintos, lo que dejaba una misión inalcanzable si el
+# jugador quedaba parado en la zona compartida. Se recalcularon las 9
+# posiciones de Nivel 4/5 con un chequeo contra los 30 puntos existentes
+# a la vez (script aparte, no a ojo) — cero solapamientos nuevos excepto
+# uno residual de 10px entre bicicletero_bloque_e y reciclar_este, ya
+# mitigado por el cambio en _input() que elige el punto más cercano en
+# vez de por prioridad fija de nivel.
 const DATOS_LLAVES_AGUA : Array = [
-	# Mismo hueco que led_bloque_c (310,500), entre Bloque D (y≤480) y
-	# Bloque C (y≥520) — desplazado en x para no solapar con el punto LED.
-	{"id": "llave_bloque_c",   "nombre": "Baños cerca Bloque C",   "pos": Vector2(400, 500)},
-	# Mismo corredor y=660 que led_bloque_a, desplazado al oeste, despejado
-	# de Fotocopiado (termina en x=180).
-	{"id": "llave_bloque_a",   "nombre": "Baños cerca Bloque A",   "pos": Vector2(200, 660)},
-	# Entre Lago (y≤80) y Cafetín (y≥120) — despejado por igual de ambos.
+	{"id": "llave_bloque_c",   "nombre": "Baños cerca Bloque C",   "pos": Vector2(490, 510)},
+	{"id": "llave_bloque_a",   "nombre": "Baños cerca Bloque A",   "pos": Vector2(150, 550)},
 	{"id": "llave_corredor_n", "nombre": "Bebedero Corredor Norte", "pos": Vector2(300, 100)},
-	# Cruce de corredores: y=660 (entre Bloque A y Bloque B) x x≈495
-	# (entre Bloque C/D y Bloque B) — ya verificado despejado.
-	{"id": "llave_patio_e",    "nombre": "Bebedero Corredor Sur",  "pos": Vector2(495, 660)},
-	# Mismo corredor vertical x≈1100 que led_bloque_f/reciclar_este, entre
-	# ambos y despejado del borde superior del Rectorado (y=480).
-	{"id": "llave_este",       "nombre": "Baños Est. a Distancia", "pos": Vector2(1100, 460)},
-	# Hueco horizontal entre Bloque E (y≤420) y Rectorado (y≥480),
-	# desplazado de solar_rectorado (900,450) para no solaparse con él.
-	{"id": "llave_bloque_b",   "nombre": "Bebedero Plaza Este",    "pos": Vector2(990, 450)},
+	{"id": "llave_patio_e",    "nombre": "Bebedero Corredor Sur",  "pos": Vector2(495, 630)},
+	{"id": "llave_este",       "nombre": "Baños Est. a Distancia", "pos": Vector2(1090, 640)},
+	{"id": "llave_bloque_b",   "nombre": "Bebedero Plaza Este",    "pos": Vector2(990, 690)},
 ]
 
 const DATOS_PUNTOS_CAPTACION : Array = [
-	# Despejado del borde oeste de Bloque E (x=700) por 30px.
 	{"id": "captacion_biblioteca", "nombre": "Techo de la Biblioteca", "indice_mision": 0,
-	 "pos": Vector2(670, 220)},
-	# Hueco abierto entre Bloque D/Cafetín (x≤480) y Bloque E (x≥700) —
-	# amplio margen en ambos ejes.
+	 "pos": Vector2(520, 210)},
 	{"id": "captacion_bloque_c",   "nombre": "Techo del Bloque C",     "indice_mision": 1,
-	 "pos": Vector2(497, 285)},
+	 "pos": Vector2(420, 300)},
 ]
 
-# NOTA: las 3 posiciones de Nivel 5 se verificaron contra EDIFICIOS de
-# colision_tilemap.gd ANTES de escribirlas (no después, como pasó con
-# Nivel 4) — todas con ≥20px de margen a cualquier borde de edificio.
 const DATOS_OFICINA_MOVILIDAD : Array = [
-	# Franja abierta bajo el Lago (y≤80), entre Cafetín (x≥280) y Bloque E
-	# (x≤700) — 20px de margen respecto al borde del lago.
 	{"id": "oficina_movilidad", "nombre": "Oficina de Movilidad Sostenible", "pos": Vector2(600, 100)},
 ]
 
 const DATOS_PUNTOS_BICICLETERO : Array = [
-	# Hueco horizontal entre Bloque E (y≤420) y Rectorado (y≥480).
 	{"id": "bicicletero_bloque_e", "nombre": "Bicicletero — Bloque E", "indice_mision": 0,
-	 "pos": Vector2(820, 450)},
-	# Hueco vertical entre Cafetín (y≤280) y Bloque D (y≥320) — mismo
-	# corredor donde ya vive led_bloque_d, desplazado en x.
+	 "pos": Vector2(1020, 460)},
 	{"id": "bicicletero_cafetin",   "nombre": "Bicicletero — Cafetín",   "indice_mision": 1,
-	 "pos": Vector2(430, 300)},
+	 "pos": Vector2(200, 360)},
 ]
 
 
