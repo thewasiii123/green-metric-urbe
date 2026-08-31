@@ -32,11 +32,11 @@ const TOTAL_MISIONES : Dictionary = {
 	3: 6,   # 6 puntos de donación y reciclaje
 	4: 8,   # 6 llaves abiertas + 2 captación de agua de lluvia
 	5: 8,   # 6 decisiones de movilidad + 2 bicicleteros
-	6: 0
+	6: 4,   # malla_verde + comite_ambiental + semana_verde + informe_final
 }
 
-const XP_POR_MISION : Dictionary  = {1: 40, 2: 50, 3: 35, 4: 35, 5: 35, 6: 35}
-const EC_POR_MISION : Dictionary  = {1: 15, 2: 20, 3: 12, 4: 12, 5: 12, 6: 12}
+const XP_POR_MISION : Dictionary  = {1: 40, 2: 50, 3: 35, 4: 35, 5: 35, 6: 70}
+const EC_POR_MISION : Dictionary  = {1: 15, 2: 20, 3: 12, 4: 12, 5: 12, 6: 20}
 const XP_NIVEL_BONUS : Dictionary = {1: 150, 2: 250, 3: 180, 4: 180, 5: 180, 6: 200}
 
 const SAVE_PATH : String = "user://nivel_progreso.json"
@@ -45,6 +45,10 @@ const SAVE_PATH : String = "user://nivel_progreso.json"
 var nivel_actual : int = 1
 # {nivel_str: {mision_id: bool}}
 var _misiones : Dictionary = {}
+# {mision_id: Dictionary} — qué eligió el jugador en misiones con decisiones
+# propias (Nivel 6: Malla Verde, Comité, Semana Verde), para citarlas
+# textualmente en el informe final. No confundir con _misiones (solo bool).
+var _detalles : Dictionary = {}
 
 
 func _ready() -> void:
@@ -83,6 +87,13 @@ func mision_completada_q(nivel: int, mision_id: String) -> bool:
 	if not _misiones.has(s): return false
 	return (_misiones[s] as Dictionary).get(mision_id, false)
 
+func guardar_detalle(mision_id: String, detalle: Dictionary) -> void:
+	_detalles[mision_id] = detalle
+	_guardar()
+
+func obtener_detalle(mision_id: String) -> Dictionary:
+	return _detalles.get(mision_id, {})
+
 func completar_mision(nivel: int, mision_id: String) -> void:
 	if mision_completada_q(nivel, mision_id): return
 	var s := str(nivel)
@@ -113,9 +124,12 @@ func _cargar() -> void:
 	var mis = data.get("misiones", {})
 	if mis is Dictionary:
 		_misiones = mis
+	var det = data.get("detalles", {})
+	if det is Dictionary:
+		_detalles = det
 
 func _guardar() -> void:
-	var data := {"nivel_actual": nivel_actual, "misiones": _misiones}
+	var data := {"nivel_actual": nivel_actual, "misiones": _misiones, "detalles": _detalles}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if not f: return
 	f.store_string(JSON.stringify(data, "\t"))
@@ -125,4 +139,5 @@ func _guardar() -> void:
 func reset_progreso() -> void:
 	nivel_actual = 1
 	_misiones = {}
+	_detalles = {}
 	_guardar()
