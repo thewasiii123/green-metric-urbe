@@ -30,7 +30,9 @@ const TOTAL_MISIONES : Dictionary = {
 	1: 6,   # 3 zonas click (plaza) + 3 zonas drag (áreas verdes)
 	2: 8,   # 6 LED + 2 paneles solares
 	3: 6,   # 6 puntos de donación y reciclaje
-	4: 0, 5: 0, 6: 0
+	4: 8,   # 6 llaves abiertas + 2 captación de agua de lluvia
+	5: 8,   # 6 decisiones de movilidad + 2 bicicleteros
+	6: 0
 }
 
 const XP_POR_MISION : Dictionary  = {1: 40, 2: 50, 3: 35, 4: 35, 5: 35, 6: 35}

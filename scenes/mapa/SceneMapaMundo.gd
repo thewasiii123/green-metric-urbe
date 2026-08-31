@@ -31,6 +31,13 @@ const INTERIOR_BLOQUE_ESCENA    := preload("res://scenes/misiones/interior_bloqu
 const MISION_SOLAR_ESCENA       := preload("res://scenes/misiones/mision_solar.gd")
 const ZONA_RECICLAJE_ESCENA     := preload("res://scenes/misiones/zona_reciclaje.gd")
 const MISION_RECICLAR_ESCENA    := preload("res://scenes/misiones/mision_reciclar.gd")
+const LLAVE_AGUA_ESCENA         := preload("res://scenes/misiones/llave_agua.gd")
+const PUNTO_CAPTACION_ESCENA    := preload("res://scenes/misiones/punto_captacion.gd")
+const MISION_CAPTACION_ESCENA   := preload("res://scenes/misiones/mision_captacion.gd")
+const OFICINA_MOVILIDAD_ESCENA  := preload("res://scenes/misiones/oficina_movilidad.gd")
+const MISION_MOVILIDAD_ESCENA   := preload("res://scenes/misiones/mision_movilidad.gd")
+const PUNTO_BICICLETERO_ESCENA  := preload("res://scenes/misiones/punto_bicicletero.gd")
+const MISION_BICICLETERO_ESCENA := preload("res://scenes/misiones/mision_bicicletero.gd")
 
 # ── Sistema de niveles ───────────────────────────────────────
 const NIVELES : Array = [
@@ -371,6 +378,8 @@ var _zona_hint_lbl   : Label       = null
 var _celebracion_lbl : Label       = null
 var _hud_verde_fill  : ColorRect   = null
 var _hud_verde_lbl   : Label       = null
+var _hud_agua_fill   : ColorRect   = null
+var _hud_agua_lbl    : Label       = null
 
 # ── Sidebar de módulos ────────────────────────────────────────
 var _sidebar_fills  : Array = []   # Array[ColorRect]
@@ -400,6 +409,9 @@ var _plantar_ui       : CanvasLayer = null
 var _interior_ui      : CanvasLayer = null
 var _solar_ui         : CanvasLayer = null
 var _reciclar_ui      : CanvasLayer = null
+var _captacion_ui     : CanvasLayer = null
+var _movilidad_ui     : CanvasLayer = null
+var _bicicletero_ui   : CanvasLayer = null
 var _zonas_verdes        : Array       = []   # Array[Node2D]
 var _panel_zona_mejora   : Panel       = null
 var _pzm_titulo_lbl      : Label       = null
@@ -620,6 +632,26 @@ func _construir_hud() -> void:
 	_hud_verde_lbl.text = "🌿 Índice Verde: 0%"
 	_hud_canvas.add_child(_hud_verde_lbl)
 
+	# ── Índice Agua (barra de progreso nivel 4) ──────────────
+	var agua_bg := ColorRect.new()
+	agua_bg.position = Vector2(10, 108)
+	agua_bg.size     = Vector2(236, 12)
+	agua_bg.color    = Color(0.05, 0.10, 0.14)
+	_hud_canvas.add_child(agua_bg)
+
+	_hud_agua_fill = ColorRect.new()
+	_hud_agua_fill.position = Vector2(10, 108)
+	_hud_agua_fill.size     = Vector2(0, 12)
+	_hud_agua_fill.color    = Color(0.18, 0.62, 0.90)
+	_hud_canvas.add_child(_hud_agua_fill)
+
+	_hud_agua_lbl = Label.new()
+	_hud_agua_lbl.position = Vector2(10, 120)
+	_hud_agua_lbl.add_theme_font_size_override("font_size", 9)
+	_hud_agua_lbl.add_theme_color_override("font_color", Color(0.55, 0.85, 0.98))
+	_hud_agua_lbl.text = "💧 Índice Agua: 0%"
+	_hud_canvas.add_child(_hud_agua_lbl)
+
 
 func _spawn_npcs() -> void:
 	for datos in DATOS_NPCS:
@@ -822,6 +854,28 @@ func _input(event: InputEvent) -> void:
 			zr.intentar_interactuar()
 			get_viewport().set_input_as_handled()
 			return
+	# ── Nivel 4: llaves abiertas y captación de agua ──────────────
+	for la in get_tree().get_nodes_in_group("llave_agua"):
+		if la.get("_jugador_cerca"):
+			la.intentar_interactuar()
+			get_viewport().set_input_as_handled()
+			return
+	for pc in get_tree().get_nodes_in_group("punto_captacion"):
+		if pc.get("_jugador_cerca"):
+			pc.intentar_interactuar()
+			get_viewport().set_input_as_handled()
+			return
+	# ── Nivel 5: oficina de movilidad y bicicleteros ──────────────
+	for om in get_tree().get_nodes_in_group("oficina_movilidad"):
+		if om.get("_jugador_cerca"):
+			om.intentar_interactuar()
+			get_viewport().set_input_as_handled()
+			return
+	for pb in get_tree().get_nodes_in_group("punto_bicicletero"):
+		if pb.get("_jugador_cerca"):
+			pb.intentar_interactuar()
+			get_viewport().set_input_as_handled()
+			return
 	# ── Sin misión de nivel: contenedores y zonas verdes ─────────
 	_verificar_contenedor_cercano()
 	_verificar_zona_verde_cercana()
@@ -1017,7 +1071,7 @@ func _construir_sidebar() -> void:
 	panel.offset_right  = 0.0
 	panel.offset_bottom = ALTO
 	var ps := StyleBoxFlat.new()
-	ps.bg_color     = Color(0.04, 0.07, 0.10, 0.88)
+	ps.bg_color     = Color(0.04, 0.07, 0.10, 0.97)
 	ps.border_color = Color(0.20, 0.62, 0.20)
 	ps.set_border_width_all(2)
 	ps.corner_radius_bottom_left  = 10
@@ -1962,6 +2016,62 @@ const DATOS_ZONAS_RECICLAJE : Array = [
 ]
 
 
+# NOTA sobre posiciones: verificadas contra los rectángulos de colisión
+# reales de EDIFICIOS en colision_tilemap.gd (no son una estimación visual).
+# Se abrió el juego, se confirmó que 3 de las 8 posiciones originales caían
+# literalmente dentro de un edificio (Bloque D, Bloque C y Bloque E), y se
+# recalcularon usando los mismos huecos de corredor que ya usan los puntos
+# LED/reciclaje existentes, comprobados como transitables.
+const DATOS_LLAVES_AGUA : Array = [
+	# Mismo hueco que led_bloque_c (310,500), entre Bloque D (y≤480) y
+	# Bloque C (y≥520) — desplazado en x para no solapar con el punto LED.
+	{"id": "llave_bloque_c",   "nombre": "Baños cerca Bloque C",   "pos": Vector2(400, 500)},
+	# Mismo corredor y=660 que led_bloque_a, desplazado al oeste, despejado
+	# de Fotocopiado (termina en x=180).
+	{"id": "llave_bloque_a",   "nombre": "Baños cerca Bloque A",   "pos": Vector2(200, 660)},
+	# Entre Lago (y≤80) y Cafetín (y≥120) — despejado por igual de ambos.
+	{"id": "llave_corredor_n", "nombre": "Bebedero Corredor Norte", "pos": Vector2(300, 100)},
+	# Cruce de corredores: y=660 (entre Bloque A y Bloque B) x x≈495
+	# (entre Bloque C/D y Bloque B) — ya verificado despejado.
+	{"id": "llave_patio_e",    "nombre": "Bebedero Corredor Sur",  "pos": Vector2(495, 660)},
+	# Mismo corredor vertical x≈1100 que led_bloque_f/reciclar_este, entre
+	# ambos y despejado del borde superior del Rectorado (y=480).
+	{"id": "llave_este",       "nombre": "Baños Est. a Distancia", "pos": Vector2(1100, 460)},
+	# Hueco horizontal entre Bloque E (y≤420) y Rectorado (y≥480),
+	# desplazado de solar_rectorado (900,450) para no solaparse con él.
+	{"id": "llave_bloque_b",   "nombre": "Bebedero Plaza Este",    "pos": Vector2(990, 450)},
+]
+
+const DATOS_PUNTOS_CAPTACION : Array = [
+	# Despejado del borde oeste de Bloque E (x=700) por 30px.
+	{"id": "captacion_biblioteca", "nombre": "Techo de la Biblioteca", "indice_mision": 0,
+	 "pos": Vector2(670, 220)},
+	# Hueco abierto entre Bloque D/Cafetín (x≤480) y Bloque E (x≥700) —
+	# amplio margen en ambos ejes.
+	{"id": "captacion_bloque_c",   "nombre": "Techo del Bloque C",     "indice_mision": 1,
+	 "pos": Vector2(497, 285)},
+]
+
+# NOTA: las 3 posiciones de Nivel 5 se verificaron contra EDIFICIOS de
+# colision_tilemap.gd ANTES de escribirlas (no después, como pasó con
+# Nivel 4) — todas con ≥20px de margen a cualquier borde de edificio.
+const DATOS_OFICINA_MOVILIDAD : Array = [
+	# Franja abierta bajo el Lago (y≤80), entre Cafetín (x≥280) y Bloque E
+	# (x≤700) — 20px de margen respecto al borde del lago.
+	{"id": "oficina_movilidad", "nombre": "Oficina de Movilidad Sostenible", "pos": Vector2(600, 100)},
+]
+
+const DATOS_PUNTOS_BICICLETERO : Array = [
+	# Hueco horizontal entre Bloque E (y≤420) y Rectorado (y≥480).
+	{"id": "bicicletero_bloque_e", "nombre": "Bicicletero — Bloque E", "indice_mision": 0,
+	 "pos": Vector2(820, 450)},
+	# Hueco vertical entre Cafetín (y≤280) y Bloque D (y≥320) — mismo
+	# corredor donde ya vive led_bloque_d, desplazado en x.
+	{"id": "bicicletero_cafetin",   "nombre": "Bicicletero — Cafetín",   "indice_mision": 1,
+	 "pos": Vector2(430, 300)},
+]
+
+
 func _nivel_mgr():
 	return get_node_or_null("/root/NivelManager")
 
@@ -1984,10 +2094,26 @@ func _init_misiones_nivel() -> void:
 	add_child(_reciclar_ui)
 	_reciclar_ui.mision_reciclaje_completada.connect(_on_reciclaje_completado)
 
+	_captacion_ui = MISION_CAPTACION_ESCENA.new()
+	add_child(_captacion_ui)
+	_captacion_ui.mision_captacion_completada.connect(_on_captacion_completado)
+
+	_movilidad_ui = MISION_MOVILIDAD_ESCENA.new()
+	add_child(_movilidad_ui)
+	_movilidad_ui.mision_movilidad_completada.connect(_on_movilidad_completado)
+
+	_bicicletero_ui = MISION_BICICLETERO_ESCENA.new()
+	add_child(_bicicletero_ui)
+	_bicicletero_ui.mision_bicicletero_completada.connect(_on_bicicletero_completado)
+
 	# ── Spawns en mapa ───────────────────────────────────────
 	_spawn_zonas_tierra()
 	_spawn_puntos_energia()
 	_spawn_zonas_reciclaje()
+	_spawn_llaves_agua()
+	_spawn_puntos_captacion()
+	_spawn_oficina_movilidad()
+	_spawn_puntos_bicicletero()
 
 	# ── Señales de NivelManager ──────────────────────────────
 	var nm = _nivel_mgr()
@@ -2060,6 +2186,83 @@ func _spawn_zonas_reciclaje() -> void:
 			zr.vaciado_servicio.connect(_on_papelera_vaciada.bind(zr))
 
 
+func _spawn_llaves_agua() -> void:
+	var nm = _nivel_mgr()
+	if not nm or not nm.nivel_desbloqueado(4):
+		return
+	for dato : Dictionary in DATOS_LLAVES_AGUA:
+		var existe := false
+		for child in get_children():
+			if child.get("mision_id") == dato["id"]:
+				existe = true
+				break
+		if existe: continue
+		var la := LLAVE_AGUA_ESCENA.new()
+		la.set("mision_id",    dato["id"])
+		la.set("nombre_llave", dato["nombre"])
+		la.position = dato["pos"]
+		la.z_index  = 1
+		add_child(la)
+		la.llave_cerrada.connect(_on_llave_cerrada)
+
+
+func _spawn_puntos_captacion() -> void:
+	var nm = _nivel_mgr()
+	if not nm or not nm.nivel_desbloqueado(4):
+		return
+	for dato : Dictionary in DATOS_PUNTOS_CAPTACION:
+		var existe := false
+		for child in get_children():
+			if child.get("mision_id") == dato["id"]:
+				existe = true
+				break
+		if existe: continue
+		var pc := PUNTO_CAPTACION_ESCENA.new()
+		pc.set("mision_id",     dato["id"])
+		pc.set("nombre_punto",  dato["nombre"])
+		pc.set("indice_mision", dato["indice_mision"])
+		pc.position = dato["pos"]
+		pc.z_index  = 1
+		add_child(pc)
+		pc.captacion_solicitada.connect(_on_captacion_solicitada)
+
+
+func _spawn_oficina_movilidad() -> void:
+	var nm = _nivel_mgr()
+	if not nm or not nm.nivel_desbloqueado(5):
+		return
+	if not get_tree().get_nodes_in_group("oficina_movilidad").is_empty():
+		return
+	for dato : Dictionary in DATOS_OFICINA_MOVILIDAD:
+		var om := OFICINA_MOVILIDAD_ESCENA.new()
+		om.set("nombre_punto", dato["nombre"])
+		om.position = dato["pos"]
+		om.z_index  = 1
+		add_child(om)
+		om.movilidad_solicitada.connect(_on_movilidad_solicitada)
+
+
+func _spawn_puntos_bicicletero() -> void:
+	var nm = _nivel_mgr()
+	if not nm or not nm.nivel_desbloqueado(5):
+		return
+	for dato : Dictionary in DATOS_PUNTOS_BICICLETERO:
+		var existe := false
+		for child in get_children():
+			if child.get("mision_id") == dato["id"]:
+				existe = true
+				break
+		if existe: continue
+		var pb := PUNTO_BICICLETERO_ESCENA.new()
+		pb.set("mision_id",     dato["id"])
+		pb.set("nombre_punto",  dato["nombre"])
+		pb.set("indice_mision", dato["indice_mision"])
+		pb.position = dato["pos"]
+		pb.z_index  = 1
+		add_child(pb)
+		pb.bicicletero_solicitado.connect(_on_bicicletero_solicitado)
+
+
 func _on_papelera_vaciada(xp: int, ec: int, zr: Node2D) -> void:
 	var m_id : String = zr.get("mision_id") if zr.get("mision_id") != null else "papelera"
 	_aplicar_xp(xp, "servicio_%s" % m_id)
@@ -2103,6 +2306,23 @@ func _on_energia_solicitada(punto: Area2D) -> void:
 		_solar_ui.call("iniciar", idx, punto)
 
 
+func _on_captacion_solicitada(punto: Area2D) -> void:
+	if not is_instance_valid(_captacion_ui): return
+	var idx : int = punto.get("indice_mision") if punto.get("indice_mision") != null else 0
+	_captacion_ui.call("iniciar", idx, punto)
+
+
+func _on_movilidad_solicitada(punto: Area2D, mision_id: String) -> void:
+	if not is_instance_valid(_movilidad_ui): return
+	_movilidad_ui.call("iniciar", mision_id, punto)
+
+
+func _on_bicicletero_solicitado(punto: Area2D) -> void:
+	if not is_instance_valid(_bicicletero_ui): return
+	var idx : int = punto.get("indice_mision") if punto.get("indice_mision") != null else 0
+	_bicicletero_ui.call("iniciar", idx, punto)
+
+
 # ── Callbacks de misión completada ───────────────────────────
 
 func _on_mision_plantar_completada(mision_id: String, xp: int, ec: int) -> void:
@@ -2128,6 +2348,17 @@ func _actualizar_indicador_verde() -> void:
 		tw.tween_property(_hud_verde_fill, "size:x", 236.0 * pct, 0.4)
 	if _hud_verde_lbl:
 		_hud_verde_lbl.text = "🌿 Índice Verde: %.0f%%" % (pct * 100.0)
+
+
+func _actualizar_indicador_agua() -> void:
+	var nm = _nivel_mgr()
+	if not nm: return
+	var pct : float = nm.pct_nivel(4)
+	if _hud_agua_fill:
+		var tw := create_tween()
+		tw.tween_property(_hud_agua_fill, "size:x", 236.0 * pct, 0.4)
+	if _hud_agua_lbl:
+		_hud_agua_lbl.text = "💧 Índice Agua: %.0f%%" % (pct * 100.0)
 
 
 func _on_interior_completado(mision_id: String, xp: int, ec: int) -> void:
@@ -2169,6 +2400,60 @@ func _on_solar_completado(mision_id: String, xp: int, ec: int) -> void:
 	print("☀️ Solar completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
 
 
+func _on_llave_cerrada(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(4) if nm else 0.0
+	_progreso_modulos[4] = pct
+	_actualizar_sidebar()
+	_actualizar_indicador_agua()
+	SupabaseManager.guardar_progreso(4, xp, int(pct * 100), nm.nivel_completo(4) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("💧 Llave cerrada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
+func _on_captacion_completado(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(4) if nm else 0.0
+	_progreso_modulos[4] = pct
+	_actualizar_sidebar()
+	_actualizar_indicador_agua()
+	SupabaseManager.guardar_progreso(4, xp, int(pct * 100), nm.nivel_completo(4) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("🌧 Captación completada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
+func _on_movilidad_completado(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(5) if nm else 0.0
+	_progreso_modulos[5] = pct
+	_actualizar_sidebar()
+	SupabaseManager.guardar_progreso(5, xp, int(pct * 100), nm.nivel_completo(5) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("🚲 Decisión de movilidad tomada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
+func _on_bicicletero_completado(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(5) if nm else 0.0
+	_progreso_modulos[5] = pct
+	_actualizar_sidebar()
+	SupabaseManager.guardar_progreso(5, xp, int(pct * 100), nm.nivel_completo(5) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("🚲 Bicicletero instalado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
 func _on_nivel_greenmetric_completado(nivel: int) -> void:
 	var nm = _nivel_mgr()
 	var nombre = nm.NOMBRES_NIVEL[nivel] if nm else "Nivel %d" % nivel
@@ -2182,4 +2467,10 @@ func _on_nivel_greenmetric_completado(nivel: int) -> void:
 		_spawn_puntos_energia()
 	elif sig_nivel == 3 and nm and nm.nivel_desbloqueado(3):
 		_spawn_zonas_reciclaje()
+	elif sig_nivel == 4 and nm and nm.nivel_desbloqueado(4):
+		_spawn_llaves_agua()
+		_spawn_puntos_captacion()
+	elif sig_nivel == 5 and nm and nm.nivel_desbloqueado(5):
+		_spawn_oficina_movilidad()
+		_spawn_puntos_bicicletero()
 	print("%s Nivel GreenMetric %d completado! Desbloqueando nivel %d…" % [icono, nivel, sig_nivel])

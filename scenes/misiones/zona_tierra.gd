@@ -395,6 +395,9 @@ func _al_entrar(body: Node) -> void:
 	_prompt_panel.visible    = true
 	var tw := create_tween()
 	tw.tween_property(_prompt_panel, "modulate:a", 1.0, 0.20)
+	if is_instance_valid(_eco_badge):
+		var twb := create_tween()
+		twb.tween_property(_eco_badge, "modulate:a", 0.90, 0.20)
 
 
 func _actualizar_texto_prompt() -> void:
@@ -414,6 +417,9 @@ func _al_salir(body: Node) -> void:
 	var tw := create_tween()
 	tw.tween_property(_prompt_panel, "modulate:a", 0.0, 0.16)
 	tw.tween_callback(func(): _prompt_panel.visible = false)
+	if is_instance_valid(_eco_badge):
+		var twb := create_tween()
+		twb.tween_property(_eco_badge, "modulate:a", 0.0, 0.16)
 	if is_instance_valid(_info_panel) and _info_panel.visible:
 		var tw2 := create_tween()
 		tw2.tween_property(_info_panel, "modulate:a", 0.0, 0.16)
@@ -465,14 +471,17 @@ func _marcar_completada(animar : bool = true) -> void:
 
 
 func _crear_eco_badge() -> void:
+	# Solo visible cuando el jugador está cerca — evita que el mapa se
+	# llene de badges permanentes al plantar muchos árboles.
 	if is_instance_valid(_eco_badge): return
 	_eco_badge = EcoBadge.new()
 	_eco_badge.position = Vector2(0, -52)
 	_eco_badge.z_index  = 3
 	_eco_badge.modulate.a = 0.0
 	add_child(_eco_badge)
-	var tw := create_tween()
-	tw.tween_property(_eco_badge, "modulate:a", 0.90, 0.8)
+	if _jugador_cerca:
+		var tw := create_tween()
+		tw.tween_property(_eco_badge, "modulate:a", 0.90, 0.8)
 
 
 func _activar_necesidad_riego() -> void:

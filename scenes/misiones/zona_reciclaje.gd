@@ -394,3 +394,4 @@ func _marcar_completado() -> void:
 	_completada = true
 	if is_instance_valid(_visual_node):
 		(_visual_node as BinVisual).completada = true
+		_visual_node.modulate.a = 0.6   # atenuado tras completarse; sigue visible por el llenado ambiental

@@ -362,5 +362,7 @@ func _mostrar_info_completada() -> void:
 func _marcar_completado() -> void:
 	_completado = true
 	if has_meta("energy_icon"):
-		(get_meta("energy_icon") as EnergyIcon).completado = true
+		var icon := get_meta("energy_icon") as EnergyIcon
+		icon.completado = true
+		icon.modulate.a = 0.5   # atenuado: ya no compite visualmente con lo pendiente
 	_prompt_panel.visible = false
