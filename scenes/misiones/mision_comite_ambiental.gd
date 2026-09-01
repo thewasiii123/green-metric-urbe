@@ -70,6 +70,7 @@ var _punto_ref     : Area2D = null
 var _convencidos   : Array  = []   # Array[String] ids de estudiantes ya ganados
 var _idx_actual    : int    = 0
 var _opcion_sel    : int    = -1
+var _intentos      : int    = 0   # intentos en el estudiante actual (para medir aprendizaje por repetición)
 
 # ── Nodos UI ─────────────────────────────────────────────────
 var _panel_root    : Panel   = null
@@ -104,6 +105,7 @@ func iniciar(punto_node: Area2D) -> void:
 	_opcion_sel = -1
 	_mostrar_estudiante()
 	show()
+	SupabaseManager.registrar_evento(6, MISION_ID, "mision_iniciada")
 	var hb = get_tree().get_first_node_in_group("hint_bubble")
 	if hb:
 		hb.push("primer_comite",
@@ -125,6 +127,7 @@ func _mostrar_estudiante() -> void:
 	_objecion_lbl.text = e["objecion"]
 	_feedback_lbl.text = ""
 	_opcion_sel = -1
+	_intentos   = 0
 	for child in _opciones_cont.get_children():
 		child.queue_free()
 	_opcion_btns = []
@@ -151,9 +154,13 @@ func _mostrar_estudiante() -> void:
 		_opcion_btns.append(btn)
 
 
-func _on_elegir_opcion(correcta: bool, _texto: String) -> void:
+func _on_elegir_opcion(correcta: bool, texto: String) -> void:
 	for btn in _opcion_btns:
 		(btn as Button).disabled = true
+	_intentos += 1
+	var estudiante_id : String = ESTUDIANTES[_idx_actual]["id"]
+	SupabaseManager.registrar_evento(6, MISION_ID, "opcion_elegida",
+		{"estudiante": estudiante_id, "texto": texto}, correcta, _intentos)
 	if correcta:
 		var e : Dictionary = ESTUDIANTES[_idx_actual]
 		_feedback_lbl.text = "✅ " + String(e["feedback_ok"])
@@ -192,6 +199,7 @@ func _completar_mision() -> void:
 		_punto_ref._marcar_completado()
 	var xp : int = int(nm.XP_POR_MISION.get(6, 70)) if nm else 70
 	var ec : int = int(nm.EC_POR_MISION.get(6, 20)) if nm else 20
+	SupabaseManager.registrar_evento(6, MISION_ID, "mision_completada", {"miembros": nombres})
 	comite_completada.emit(MISION_ID, xp, ec)
 	_mostrar_confirmacion(xp, ec)
 

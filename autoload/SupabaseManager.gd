@@ -29,11 +29,19 @@ var _accion_actual : String = ""
 var _cola          : Array  = []   # Array[Dictionary] peticiones en espera
 var _ocupado       : bool   = false
 
+# ── Telemetría de aprendizaje ──────────────────────────────────
+# session_id: una por cada vez que se abre el juego (no por misión), para
+# poder medir tiempo-en-tarea y secuencia real de eventos por sesión.
+const EVENTOS_LOCAL_PATH : String = "user://eventos_aprendizaje.jsonl"
+var _session_id : String = ""
+
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
 	add_child(_http)
 	_http.request_completed.connect(_on_respuesta_http)
+	randomize()
+	_session_id = "%d-%04x" % [Time.get_unix_time_from_system(), randi() % 0xFFFF]
 
 
 func _encolar(accion: String, url: String, metodo: int,
@@ -114,6 +122,57 @@ func guardar_progreso(modulo_id: int, puntaje: int, xp: int, completado: bool) -
 	_encolar("guardar_progreso", url, HTTPClient.METHOD_POST, hdrs, body)
 
 
+# ── EVENTOS DE APRENDIZAJE ───────────────────────────────────
+# Registro de PROCESO (no solo el resultado final): cada elección, acierto,
+# fallo e intento, con timestamp — la base para poder argumentar aprendizaje
+# ("¿mejoró con los intentos?") y empoderamiento ("¿qué eligió cuando tuvo
+# opciones reales?"), no solo que "completó" contenido.
+#
+# `correcto` e `intento_num` son Variant a propósito: quedan en null cuando
+# no aplican (ej. "mision_iniciada"), en vez de forzar un 0/false falso.
+func registrar_evento(nivel: int, mision_id: String, tipo_evento: String,
+					   detalle: Dictionary = {}, correcto = null, intento_num = null) -> void:
+	var evento := {
+		"session_id"  : _session_id,
+		"nivel"       : nivel,
+		"mision_id"   : mision_id,
+		"tipo_evento" : tipo_evento,
+		"correcto"    : correcto,
+		"intento_num" : intento_num,
+		"detalle"     : detalle,
+		"creado_en_local": Time.get_datetime_string_from_system(true),
+	}
+	_registrar_evento_local(evento)
+	if jwt_token.is_empty():
+		return   # sin sesión iniciada: se queda solo en el log local
+	var url  := SUPABASE_URL + "/rest/v1/eventos_aprendizaje"
+	var body := JSON.stringify({
+		"user_id"     : user_id,
+		"session_id"  : _session_id,
+		"nivel"       : nivel,
+		"mision_id"   : mision_id,
+		"tipo_evento" : tipo_evento,
+		"correcto"    : correcto,
+		"intento_num" : intento_num,
+		"detalle"     : detalle,
+	})
+	_encolar("registrar_evento", url, HTTPClient.METHOD_POST, _headers_auth(), body)
+
+
+# Espejo local: si Supabase no responde (sin internet, backend caído), el
+# dato de investigación no se pierde — queda en disco, exportable a mano.
+func _registrar_evento_local(evento: Dictionary) -> void:
+	var f : FileAccess
+	if FileAccess.file_exists(EVENTOS_LOCAL_PATH):
+		f = FileAccess.open(EVENTOS_LOCAL_PATH, FileAccess.READ_WRITE)
+		if f: f.seek_end()
+	else:
+		f = FileAccess.open(EVENTOS_LOCAL_PATH, FileAccess.WRITE)
+	if not f: return
+	f.store_line(JSON.stringify(evento))
+	f.close()
+
+
 # ── MANEJADOR CENTRAL ─────────────────────────────────────────
 func _on_respuesta_http(result: int, code: int, _hdrs: PackedStringArray, body: PackedByteArray) -> void:
 	var accion := _accion_actual
@@ -136,6 +195,7 @@ func _on_respuesta_http(result: int, code: int, _hdrs: PackedStringArray, body: 
 		"cargar_progreso" : _procesar_progreso(code, datos)
 		"guardar_progreso": _procesar_guardar(code)
 		"cargar_ranking"  : _procesar_ranking(code, datos)
+		"registrar_evento": _procesar_evento(code)
 
 	_despachar()   # lanza la siguiente petición en cola si la hay
 
@@ -198,6 +258,14 @@ func _procesar_guardar(code: int) -> void:
 		emit_signal("progreso_guardado")
 	else:
 		emit_signal("error_red", "No se pudo guardar el progreso.")
+
+
+func _procesar_evento(code: int) -> void:
+	# Silencioso a propósito: el evento ya quedó en el log local pase lo
+	# que pase con la red, así que un fallo remoto no debe interrumpir
+	# ni alertar al jugador — solo queda en consola para depurar.
+	if not (code in [200, 201]):
+		print("SupabaseManager: no se pudo sincronizar un evento de aprendizaje (código %d), queda en el log local." % code)
 
 
 func _procesar_ranking(code: int, datos: Variant) -> void:

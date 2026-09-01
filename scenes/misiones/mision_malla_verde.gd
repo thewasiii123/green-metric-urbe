@@ -63,6 +63,7 @@ func iniciar(punto_node: Area2D) -> void:
 	_seleccionado  = ""
 	_refrescar_ui()
 	show()
+	SupabaseManager.registrar_evento(6, _mision_id, "mision_iniciada")
 	var hb = get_tree().get_first_node_in_group("hint_bubble")
 	if hb:
 		hb.push("primer_malla_verde",
@@ -123,6 +124,8 @@ func _completar_mision() -> void:
 			var c := _carrera_por_id(_asignaciones[mid])
 			resumen.append({"modulo": m.get("nombre",""), "carrera": c.get("nombre","")})
 		nm.guardar_detalle(_mision_id, {"asignaciones": resumen, "gastado": _gastado(), "presupuesto": PRESUPUESTO_TOTAL})
+		SupabaseManager.registrar_evento(6, _mision_id, "mision_completada",
+			{"asignaciones": resumen, "gastado": _gastado(), "presupuesto": PRESUPUESTO_TOTAL})
 	if is_instance_valid(_punto_ref) and _punto_ref.has_method("_marcar_completado"):
 		_punto_ref._marcar_completado()
 	var xp : int = int(nm.XP_POR_MISION.get(6, 70)) if nm else 70

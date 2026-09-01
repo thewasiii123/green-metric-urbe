@@ -176,6 +176,7 @@ func iniciar(mision_id: String, punto_node: Area2D) -> void:
 	_opcion_sel = -1
 	_poblar()
 	show()
+	SupabaseManager.registrar_evento(5, _mision_id, "mision_iniciada")
 
 
 func _poblar() -> void:
@@ -242,8 +243,12 @@ func _seleccionar(idx: int) -> void:
 
 func _confirmar() -> void:
 	if _opcion_sel < 0: return
-	var delta : float = float(_esc_actual["opciones"][_opcion_sel]["delta"])
+	var op_elegida : Dictionary = _esc_actual["opciones"][_opcion_sel]
+	var delta : float = float(op_elegida["delta"])
 	hide()
+
+	SupabaseManager.registrar_evento(5, _mision_id, "opcion_elegida",
+		{"texto": op_elegida["texto"], "delta": delta, "impacto": op_elegida["impacto"]})
 
 	var nm = _nivel_mgr()
 	if nm:

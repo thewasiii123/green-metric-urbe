@@ -55,6 +55,7 @@ func iniciar(punto_node: Area2D) -> void:
 	_elegidas  = []
 	_refrescar_ui()
 	show()
+	SupabaseManager.registrar_evento(6, MISION_ID, "mision_iniciada")
 	var hb = get_tree().get_first_node_in_group("hint_bubble")
 	if hb:
 		hb.push("primer_semana_verde",
@@ -89,6 +90,7 @@ func _saldo_actual() -> int:
 func _on_click_actividad(aid: String) -> void:
 	if aid in _elegidas:
 		_elegidas.erase(aid)
+		SupabaseManager.registrar_evento(6, MISION_ID, "opcion_quitada", {"actividad": aid})
 		_refrescar_ui()
 		return
 	if _elegidas.size() >= CUPO_ELEGIR:
@@ -98,6 +100,9 @@ func _on_click_actividad(aid: String) -> void:
 		_aviso_lbl.text = "No te alcanzan los EcoCredits para agregar esta actividad."
 		return
 	_elegidas.append(aid)
+	# Exploración libre — probar combinaciones antes de confirmar es en sí
+	# mismo una señal de decisión autónoma, no solo el resultado final.
+	SupabaseManager.registrar_evento(6, MISION_ID, "opcion_elegida", {"actividad": aid})
 	_refrescar_ui()
 
 
@@ -119,6 +124,8 @@ func _completar_mision() -> void:
 			"costo_total": costo,
 			"alcance_total": _alcance_total(),
 		})
+		SupabaseManager.registrar_evento(6, MISION_ID, "mision_completada",
+			{"actividades": elegidas_nombres, "costo_total": costo, "alcance_total": _alcance_total()})
 	if is_instance_valid(_punto_ref) and _punto_ref.has_method("_marcar_completado"):
 		_punto_ref._marcar_completado()
 	var xp : int = int(nm.XP_POR_MISION.get(6, 70)) if nm else 70
