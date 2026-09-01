@@ -44,6 +44,8 @@ const PUNTO_COMITE_ESCENA       := preload("res://scenes/misiones/punto_comite_a
 const MISION_COMITE_ESCENA      := preload("res://scenes/misiones/mision_comite_ambiental.gd")
 const PUNTO_SEMANA_VERDE_ESCENA := preload("res://scenes/misiones/punto_semana_verde.gd")
 const MISION_SEMANA_VERDE_ESCENA:= preload("res://scenes/misiones/mision_semana_verde.gd")
+const PUNTO_INFORME_ESCENA      := preload("res://scenes/misiones/punto_informe_final.gd")
+const MISION_INFORME_ESCENA     := preload("res://scenes/misiones/mision_informe_final.gd")
 
 # ── Sistema de niveles ───────────────────────────────────────
 const NIVELES : Array = [
@@ -423,6 +425,7 @@ var _bicicletero_ui   : CanvasLayer = null
 var _malla_verde_ui   : CanvasLayer = null
 var _comite_ui        : CanvasLayer = null
 var _semana_verde_ui  : CanvasLayer = null
+var _informe_ui       : CanvasLayer = null
 var _zonas_verdes        : Array       = []   # Array[Node2D]
 var _panel_zona_mejora   : Panel       = null
 var _pzm_titulo_lbl      : Label       = null
@@ -877,6 +880,7 @@ func _input(event: InputEvent) -> void:
 		"zona_tierra", "punto_energia", "zona_reciclaje",
 		"llave_agua", "punto_captacion", "oficina_movilidad", "punto_bicicletero",
 		"punto_malla_verde", "punto_comite_ambiental", "punto_semana_verde",
+		"punto_informe_final",
 	]
 	var candidato      : Node  = null
 	var candidato_dist : float = INF
@@ -2084,6 +2088,10 @@ const DATOS_PUNTO_SEMANA_VERDE : Array = [
 	{"id": "semana_verde", "nombre": "Auditorio — Semana Verde URBE", "pos": Vector2(100, 438)},
 ]
 
+const DATOS_PUNTO_INFORME : Array = [
+	{"id": "informe_final", "nombre": "Decanato — Informe de Sostenibilidad", "pos": Vector2(920, 98)},
+]
+
 
 func _nivel_mgr():
 	return get_node_or_null("/root/NivelManager")
@@ -2131,6 +2139,10 @@ func _init_misiones_nivel() -> void:
 	add_child(_semana_verde_ui)
 	_semana_verde_ui.semana_verde_completada.connect(_on_semana_verde_completado)
 
+	_informe_ui = MISION_INFORME_ESCENA.new()
+	add_child(_informe_ui)
+	_informe_ui.informe_completada.connect(_on_informe_completado)
+
 	# ── Spawns en mapa ───────────────────────────────────────
 	_spawn_zonas_tierra()
 	_spawn_puntos_energia()
@@ -2142,6 +2154,7 @@ func _init_misiones_nivel() -> void:
 	_spawn_punto_malla_verde()
 	_spawn_punto_comite()
 	_spawn_punto_semana_verde()
+	_spawn_punto_informe()
 
 	# ── Señales de NivelManager ──────────────────────────────
 	var nm = _nivel_mgr()
@@ -2351,6 +2364,26 @@ func _spawn_punto_semana_verde() -> void:
 		psv.semana_verde_solicitada.connect(_on_semana_verde_solicitada)
 
 
+func _spawn_punto_informe() -> void:
+	var nm = _nivel_mgr()
+	if not nm or not nm.nivel_desbloqueado(6):
+		return
+	for dato : Dictionary in DATOS_PUNTO_INFORME:
+		var existe := false
+		for child in get_children():
+			if child.get("mision_id") == dato["id"]:
+				existe = true
+				break
+		if existe: continue
+		var pi := PUNTO_INFORME_ESCENA.new()
+		pi.set("mision_id",    dato["id"])
+		pi.set("nombre_punto", dato["nombre"])
+		pi.position = dato["pos"]
+		pi.z_index  = 1
+		add_child(pi)
+		pi.informe_solicitado.connect(_on_informe_solicitado)
+
+
 func _on_papelera_vaciada(xp: int, ec: int, zr: Node2D) -> void:
 	var m_id : String = zr.get("mision_id") if zr.get("mision_id") != null else "papelera"
 	_aplicar_xp(xp, "servicio_%s" % m_id)
@@ -2424,6 +2457,11 @@ func _on_comite_solicitado(punto: Area2D) -> void:
 func _on_semana_verde_solicitada(punto: Area2D) -> void:
 	if not is_instance_valid(_semana_verde_ui): return
 	_semana_verde_ui.call("iniciar", punto)
+
+
+func _on_informe_solicitado(punto: Area2D) -> void:
+	if not is_instance_valid(_informe_ui): return
+	_informe_ui.call("iniciar", punto)
 
 
 # ── Callbacks de misión completada ───────────────────────────
@@ -2610,6 +2648,20 @@ func _on_semana_verde_completado(mision_id: String, xp: int, ec: int) -> void:
 	print("🎪 Semana Verde organizada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
 
 
+func _on_informe_completado(mision_id: String, xp: int, ec: int) -> void:
+	_aplicar_xp(xp, mision_id)
+	EconomiaManager.ganar_creditos(ec)
+	var nm = _nivel_mgr()
+	var pct : float = nm.pct_nivel(6) if nm else 0.0
+	_progreso_modulos[6] = pct
+	_actualizar_sidebar()
+	_actualizar_indicador_edu()
+	SupabaseManager.guardar_progreso(6, xp, int(pct * 100), nm.nivel_completo(6) if nm else false)
+	_mostrar_mision_completada(mision_id, xp)
+	_sfx("mision")
+	print("📄 Informe de Sostenibilidad publicado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
+
+
 func _on_nivel_greenmetric_completado(nivel: int) -> void:
 	var nm = _nivel_mgr()
 	var nombre = nm.NOMBRES_NIVEL[nivel] if nm else "Nivel %d" % nivel
@@ -2633,4 +2685,5 @@ func _on_nivel_greenmetric_completado(nivel: int) -> void:
 		_spawn_punto_malla_verde()
 		_spawn_punto_comite()
 		_spawn_punto_semana_verde()
+		_spawn_punto_informe()
 	print("%s Nivel GreenMetric %d completado! Desbloqueando nivel %d…" % [icono, nivel, sig_nivel])
