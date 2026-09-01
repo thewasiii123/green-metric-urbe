@@ -2115,7 +2115,7 @@ const DATOS_ZONAS_RECICLAJE : Array = [
 	{"id": "reciclar_patio_e",    "nombre": "Patio Este",          "pos": Vector2(660, 450)},
 	{"id": "reciclar_bloque_e",   "nombre": "Frente al Bloque E",  "pos": Vector2(685, 170)},
 	{"id": "reciclar_oeste",      "nombre": "Corredor Oeste",      "pos": Vector2(250, 480)},
-	{"id": "reciclar_sur",        "nombre": "Zona Sur Campus",     "pos": Vector2(750, 660)},
+	{"id": "reciclar_sur",        "nombre": "Zona Sur Campus",     "pos": Vector2(750, 700)},
 	{"id": "reciclar_este",       "nombre": "Est. a Distancia",    "pos": Vector2(1100, 520)},
 ]
 
