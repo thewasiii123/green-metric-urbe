@@ -39,7 +39,8 @@ const XP_POR_MISION : Dictionary  = {1: 40, 2: 50, 3: 35, 4: 35, 5: 35, 6: 70}
 const EC_POR_MISION : Dictionary  = {1: 15, 2: 20, 3: 12, 4: 12, 5: 12, 6: 20}
 const XP_NIVEL_BONUS : Dictionary = {1: 150, 2: 250, 3: 180, 4: 180, 5: 180, 6: 200}
 
-const SAVE_PATH : String = "user://nivel_progreso.json"
+const SAVE_PATH   : String = "user://nivel_progreso.json"
+const BACKUP_PATH : String = "user://nivel_progreso.json.bak"
 
 # ── Estado ───────────────────────────────────────────────────
 var nivel_actual : int = 1
@@ -49,6 +50,14 @@ var _misiones : Dictionary = {}
 # propias (Nivel 6: Malla Verde, Comité, Semana Verde), para citarlas
 # textualmente en el informe final. No confundir con _misiones (solo bool).
 var _detalles : Dictionary = {}
+
+# Resultado de la carga inicial, consultable UNA vez por quien construya el
+# HUD ("ok" | "recuperado" | "nuevo_corrupto") — antes, si el JSON se
+# corrompía (cierre abrupto a mitad de escritura, disco lleno), _cargar()
+# fallaba en silencio y el jugador perdía todo el progreso sin aviso.
+# No es señal: NivelManager._ready() corre como autoload, antes de que
+# SceneMapaMundo pueda conectarse — se consulta con obtener_estado_carga().
+var _estado_carga : String = "ok"
 
 
 func _ready() -> void:
@@ -110,25 +119,65 @@ func completar_mision(nivel: int, mision_id: String) -> void:
 
 # ── Persistencia ─────────────────────────────────────────────
 
-func _cargar() -> void:
-	if not FileAccess.file_exists(SAVE_PATH): return
-	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if not f: return
+func obtener_estado_carga() -> String:
+	return _estado_carga
+
+
+# Intenta cargar y aplicar el JSON de `path`. Devuelve false ante cualquier
+# fallo (archivo ausente, vacío, JSON inválido, forma inesperada) sin tocar
+# el estado en memoria — así una lectura fallida del save principal no dañe
+# nada antes de poder intentar con el backup.
+func _intentar_cargar_desde(path: String) -> bool:
+	if not FileAccess.file_exists(path): return false
+	var f := FileAccess.open(path, FileAccess.READ)
+	if not f: return false
 	var txt := f.get_as_text()
 	f.close()
+	if txt.is_empty(): return false
 	var json := JSON.new()
-	if json.parse(txt) != OK: return
+	if json.parse(txt) != OK: return false
 	var data = json.get_data()
-	if not (data is Dictionary): return
+	if not (data is Dictionary): return false
 	nivel_actual = int(data.get("nivel_actual", 1))
 	var mis = data.get("misiones", {})
-	if mis is Dictionary:
-		_misiones = mis
+	if mis is Dictionary: _misiones = mis
 	var det = data.get("detalles", {})
-	if det is Dictionary:
-		_detalles = det
+	if det is Dictionary: _detalles = det
+	return true
+
+
+func _cargar() -> void:
+	if _intentar_cargar_desde(SAVE_PATH):
+		_estado_carga = "ok"
+		return
+	if not FileAccess.file_exists(SAVE_PATH):
+		_estado_carga = "ok"   # partida nueva de verdad, no es un fallo
+		return
+	# El save existía pero no se pudo leer/parsear — intenta el respaldo
+	# antes de resignarse a perder el progreso.
+	if _intentar_cargar_desde(BACKUP_PATH):
+		_estado_carga = "recuperado"
+		push_warning("NivelManager: nivel_progreso.json corrupto, progreso recuperado desde backup.")
+		return
+	_estado_carga = "nuevo_corrupto"
+	push_warning("NivelManager: nivel_progreso.json y su backup están corruptos, se reinicia el progreso.")
+
 
 func _guardar() -> void:
+	# Antes de sobrescribir, respalda el save actual (solo si es válido) para
+	# poder recuperarlo si ESTA escritura se corrompe a mitad de camino.
+	if FileAccess.file_exists(SAVE_PATH):
+		var actual := FileAccess.open(SAVE_PATH, FileAccess.READ)
+		if actual:
+			var txt_actual := actual.get_as_text()
+			actual.close()
+			if not txt_actual.is_empty():
+				var chk := JSON.new()
+				if chk.parse(txt_actual) == OK:
+					var bak := FileAccess.open(BACKUP_PATH, FileAccess.WRITE)
+					if bak:
+						bak.store_string(txt_actual)
+						bak.close()
 	var data := {"nivel_actual": nivel_actual, "misiones": _misiones, "detalles": _detalles}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if not f: return
@@ -140,4 +189,7 @@ func reset_progreso() -> void:
 	nivel_actual = 1
 	_misiones = {}
 	_detalles = {}
+	_estado_carga = "ok"
 	_guardar()
+	if FileAccess.file_exists(BACKUP_PATH):
+		DirAccess.remove_absolute(BACKUP_PATH)

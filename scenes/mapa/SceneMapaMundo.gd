@@ -1193,6 +1193,90 @@ func _construir_notificacion_zona() -> void:
 	_hud_canvas.add_child(_notif_zona_lbl)
 
 
+# ════════════════════════════════════════════════════════════
+# AVISO DE ESTADO DE CARGA (save corrupto/recuperado)
+# ════════════════════════════════════════════════════════════
+# Antes, si nivel_progreso.json se corrompía (cierre abrupto a mitad de
+# escritura, disco lleno), NivelManager._cargar() fallaba en silencio y
+# el jugador volvía a Nivel 1 sin ninguna explicación — indistinguible
+# de "el juego está roto". Ahora se avisa explícitamente, con un panel
+# que el jugador debe cerrar a propósito (no un toast que se pierde solo).
+func _avisar_estado_carga() -> void:
+	var nm = _nivel_mgr()
+	if not nm: return
+	var estado : String = nm.obtener_estado_carga()
+	if estado == "ok": return
+
+	var titulo  : String
+	var mensaje : String
+	var col_borde : Color
+	if estado == "recuperado":
+		titulo  = "⚠️ Progreso recuperado"
+		mensaje = "El archivo de guardado no se pudo leer (probablemente el juego se cerró de golpe la última vez). Se recuperó tu progreso desde la copia de respaldo automática — puede faltar lo último que hiciste justo antes del cierre."
+		col_borde = Color(0.95, 0.70, 0.15)
+	else:
+		titulo  = "🚨 No se pudo recuperar el progreso"
+		mensaje = "Tanto el archivo de guardado como su respaldo están dañados y no se pudieron leer. Se reinició el progreso desde Nivel 1. Lo lamento — a partir de ahora cada guardado mantiene una copia de respaldo para que esto no vuelva a pasar sin aviso."
+		col_borde = Color(0.92, 0.30, 0.28)
+
+	var overlay := ColorRect.new()
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.color = Color(0.0, 0.0, 0.0, 0.75)
+	_hud_canvas.add_child(overlay)
+
+	var panel := Panel.new()
+	panel.custom_minimum_size = Vector2(460, 220)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left   = -230.0; panel.offset_top    = -110.0
+	panel.offset_right  =  230.0; panel.offset_bottom =  110.0
+	var ps := StyleBoxFlat.new()
+	ps.bg_color     = Color(0.08, 0.06, 0.04, 0.98)
+	ps.border_color = col_borde
+	ps.set_border_width_all(3)
+	ps.set_corner_radius_all(16)
+	ps.shadow_color = Color(col_borde.r, col_borde.g, col_borde.b, 0.45)
+	ps.shadow_size  = 22
+	panel.add_theme_stylebox_override("panel", ps)
+	overlay.add_child(panel)
+
+	var mg := MarginContainer.new()
+	mg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for k in ["margin_left","margin_right","margin_top","margin_bottom"]:
+		mg.add_theme_constant_override(k, 18)
+	panel.add_child(mg)
+
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 10)
+	mg.add_child(vb)
+
+	var tit_lbl := Label.new()
+	tit_lbl.text = titulo
+	tit_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tit_lbl.add_theme_font_size_override("font_size", 17)
+	tit_lbl.add_theme_color_override("font_color", col_borde)
+	vb.add_child(tit_lbl)
+
+	var msg_lbl := Label.new()
+	msg_lbl.text = mensaje
+	msg_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	msg_lbl.add_theme_font_size_override("font_size", 13)
+	msg_lbl.add_theme_color_override("font_color", Color(0.85, 0.82, 0.78))
+	vb.add_child(msg_lbl)
+
+	var btn := Button.new()
+	btn.text = "Entendido"
+	btn.custom_minimum_size = Vector2(0, 40)
+	btn.add_theme_font_size_override("font_size", 13)
+	var bs := StyleBoxFlat.new()
+	bs.bg_color     = Color(0.20, 0.16, 0.05)
+	bs.border_color = col_borde
+	bs.set_border_width_all(2)
+	bs.set_corner_radius_all(10)
+	btn.add_theme_stylebox_override("normal", bs)
+	btn.pressed.connect(func(): overlay.queue_free())
+	vb.add_child(btn)
+
+
 func _mostrar_notificacion_zona(icono: String, nombre: String, col: Color) -> void:
 	if not is_instance_valid(_notif_zona_lbl): return
 	_notif_zona_lbl.text = "%s  %s" % [icono, nombre]
@@ -1518,6 +1602,7 @@ func _init_sistemas_eva() -> void:
 
 	# Sistema de misiones por nivel (Nivel 1 y 2)
 	_init_misiones_nivel()
+	_avisar_estado_carga()
 
 	# EcoCredits label (esquina superior derecha)
 	_hud_creditos_lbl = Label.new()
