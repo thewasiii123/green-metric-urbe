@@ -454,7 +454,16 @@ var _hud_energia_lbl  : Label       = null
 var _insignia_lbl     : Label       = null
 
 # ── Progreso de módulos (copia local para sidebar) ────────────
-var _progreso_modulos : Dictionary = {1: 0.35, 2: 0.40, 3: 0.30, 4: 0.45, 5: 0.22, 6: 0.55}
+# Arranca en 0 para todos — antes tenía valores inventados (0.35, 0.40...)
+# que hacían que un jugador nuevo, sin hacer nada, ya mostrara 22-55% de
+# progreso, y que la barra RETROCEDIERA al completar la primera misión
+# real de un nivel (porque el handler de esa misión sobreescribe este
+# valor con NivelManager.pct_nivel(), que sí arranca en 0). También
+# desincronizaba esta barra/el reporte de resultados de los indicadores
+# HUD (💧🌿📚) y del informe final de Nivel 6, que ya usaban pct_nivel()
+# directo. Ahora las tres fuentes arrancan iguales y solo suben con
+# logros verificables.
+var _progreso_modulos : Dictionary = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0, 6: 0.0}
 
 const SIDEBAR_MODULOS : Array = [
 	{"id": 1, "icono": "🌿", "nombre": "Entorno",    "color": Color(0.18, 0.55, 0.20)},

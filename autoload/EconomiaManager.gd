@@ -19,9 +19,13 @@ var energia_actual  : int = 3
 var _fallos_racha   : int = 0
 
 # ── ImpactRating por módulo (0.0–1.0) ────────────────────────
+# Arranca en 0 para todos — antes tenía valores inventados (0.35, 0.40...)
+# que no reflejaban nada que el jugador hubiera hecho, y desincronizaban
+# esta barra de la de NivelManager.pct_nivel() (única fuente real de
+# progreso, basada en misiones completadas). Ver commit de esta fecha.
 var impacto : Dictionary = {
-	1: 0.35, 2: 0.40, 3: 0.30,
-	4: 0.45, 5: 0.22, 6: 0.55
+	1: 0.0, 2: 0.0, 3: 0.0,
+	4: 0.0, 5: 0.0, 6: 0.0
 }
 
 # ── Insignias ─────────────────────────────────────────────────
