@@ -1151,6 +1151,11 @@ func _crear_panel_plantacion() -> void:
 
 
 func _on_drag_area_input(event: InputEvent) -> void:
+	# Guard: _completar_plantacion() no oculta este panel cuando el último
+	# paso es de arrastre, así que puede seguir recibiendo input con
+	# _paso_actual ya fuera de rango (índice one-past-the-end) — sin esto,
+	# PASO_DRAG_UMBRAL[_paso_actual] revienta con "Out of bounds".
+	if _paso_actual >= PASO_DRAG_UMBRAL.size(): return
 	if event is InputEventMouseButton:
 		var ev := event as InputEventMouseButton
 		_drag_pressed = ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT
@@ -1256,6 +1261,10 @@ func _completar_plantacion() -> void:
 		(_plant_visual_node as PlantacionVisual).progreso = 1.0
 	if is_instance_valid(_plant_btn):
 		_plant_btn.disabled = true
+	# Causa de fondo del crash: en modo drag no había un equivalente a
+	# "disabled" para el panel de frotar — quedaba visible y receptivo.
+	if is_instance_valid(_drag_area):
+		_drag_area.visible = false
 	_plant_title_lbl.text = "🎉 ¡Árbol plantado con éxito!"
 	_paso_desc_lbl.text   = "¡El árbol quedó plantado en el campus URBE!"
 	var tw := create_tween()
