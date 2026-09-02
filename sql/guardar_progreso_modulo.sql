@@ -32,13 +32,30 @@
 --   - intentos         → nueva columna, cuenta cuántas veces se llamó
 --                         esta función para ese módulo. Se agrega sola
 --                         si no existía.
+--   - estudiantes.xp_total → += p_xp_delta, en la misma operación
+--                         atómica. El cliente Godot nunca toca la tabla
+--                         estudiantes (confirmado: cero referencias en
+--                         todo el proyecto) — por eso sigue en 0 hoy.
+--
+-- SUPUESTO SIN VERIFICAR — revisar antes de correr: que estudiantes.id
+-- = auth.uid() (así lo describe el trigger on_auth_user_created de este
+-- mismo proyecto Supabase, según el brief de migración de la otra
+-- función del juego — no lo confirmé yo mismo, no tengo acceso a la
+-- base en esta sesión). Si el nombre de columna o la PK son otros,
+-- ajustá el UPDATE de abajo. Si la fila en estudiantes no existe
+-- todavía para ese usuario, el UPDATE simplemente no afecta ninguna
+-- fila — no rompe la función, pero tampoco avisa. Decime si preferís
+-- que sí avise (ej. un RAISE WARNING) en vez de fallar en silencio.
 --
 -- auth.uid() se usa DENTRO de la función — no se recibe user_id como
 -- parámetro — así nadie puede escribir en la fila de otro usuario
 -- aunque modifique el cliente. La función NO es security definer: corre
 -- con los mismos permisos que ya tiene el cliente autenticado (las
--- políticas RLS actuales ya permiten este INSERT/UPDATE — el POST
--- directo del cliente ya lo demostró con un 201 real).
+-- políticas RLS actuales ya permiten este INSERT/UPDATE en
+-- progreso_estudiante — el POST directo del cliente ya lo demostró con
+-- un 201 real). Si estudiantes tiene RLS que bloquee este UPDATE para
+-- el rol authenticated, va a hacer falta security definer — no lo puse
+-- por defecto para no ampliar permisos sin que lo decidas vos.
 -- ============================================================
 
 alter table progreso_estudiante
@@ -64,6 +81,10 @@ begin
     completado       = progreso_estudiante.completado or excluded.completado,
     fecha_completado = coalesce(progreso_estudiante.fecha_completado, excluded.fecha_completado),
     intentos         = progreso_estudiante.intentos + 1;
+
+  update estudiantes
+    set xp_total = xp_total + p_xp_delta
+    where id = auth.uid();
 end;
 $$;
 
