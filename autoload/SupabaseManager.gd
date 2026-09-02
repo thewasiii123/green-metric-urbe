@@ -24,7 +24,17 @@ signal contrasena_actualizada()
 signal actualizar_contrasena_fallido(error: String)
 signal modulos_cargados(lista: Array)
 signal progreso_cargado(lista: Array)
-signal progreso_guardado()
+# xp_otorgada: lo que la RPC realmente sumó (0 si ya_registrada).
+# ya_registrada: true si esta mision_id ya estaba en misiones_estudiante —
+# la llamada contó como intento pero no otorgó XP de nuevo.
+# correccion_xp: xp_otorgada MENOS el xp que el caller ya sumó de forma
+# optimista al llamar guardar_progreso() (0 en el caso normal, negativo en
+# un duplicado). El caller debe sumar esto a su acumulador local en vez de
+# fiarse del xp que mostró antes de la respuesta del servidor.
+signal progreso_guardado(mision_id: String, xp_otorgada: int, ya_registrada: bool, correccion_xp: int)
+# xp_local: lo que hay que restar del acumulador local porque el guardado
+# falló del todo (sin respuesta válida del servidor, ni siquiera duplicado).
+signal progreso_guardado_fallido(mision_id: String, xp_local: int)
 signal ranking_cargado(lista: Array)
 signal error_red(mensaje: String)
 
@@ -38,7 +48,8 @@ var nombre_usuario : String = ""
 # mientras hay un usuario logueado.
 var _recovery_token : String = ""
 var _http          : HTTPRequest
-var _accion_actual : String = ""
+var _accion_actual : String     = ""
+var _ctx_actual    : Dictionary = {}   # contexto de la petición en vuelo (ej. mision_id)
 var _cola          : Array  = []   # Array[Dictionary] peticiones en espera
 var _ocupado       : bool   = false
 
@@ -58,9 +69,9 @@ func _ready() -> void:
 
 
 func _encolar(accion: String, url: String, metodo: int,
-			  hdrs: PackedStringArray, body: String = "") -> void:
+			  hdrs: PackedStringArray, body: String = "", ctx: Dictionary = {}) -> void:
 	_cola.append({"accion": accion, "url": url, "metodo": metodo,
-				  "hdrs": hdrs, "body": body})
+				  "hdrs": hdrs, "body": body, "ctx": ctx})
 	_despachar()
 
 
@@ -70,6 +81,7 @@ func _despachar() -> void:
 	_ocupado = true
 	var p : Dictionary = _cola.pop_front()
 	_accion_actual = p["accion"]
+	_ctx_actual    = p.get("ctx", {})
 	_http.request(p["url"], p["hdrs"], p["metodo"], p["body"])
 
 
@@ -145,27 +157,27 @@ func cargar_ranking() -> void:
 	_encolar("cargar_ranking", url, HTTPClient.METHOD_GET, _headers_anon())
 
 
-func guardar_progreso(modulo_id: int, puntaje: int, xp: int, completado: bool) -> void:
+func guardar_progreso(modulo_id: int, mision_id: String, puntaje: int, xp: int, completado: bool) -> void:
 	if jwt_token.is_empty():
 		push_error("SupabaseManager: Debes hacer login primero.")
 		return
-	# on_conflict es obligatorio para que "Prefer: resolution=merge-duplicates"
-	# haga algo: sin esto, PostgREST resuelve el conflicto contra la PK de la
-	# tabla (no contra el índice único real de user_id+modulo_id), así que
-	# el INSERT seguía chocando con esa restricción y devolvía 409 en la
-	# segunda misión de cada módulo en adelante — confirmado con logs reales
-	# del servidor (201 la primera vez, 409 después).
-	var url  := SUPABASE_URL + "/rest/v1/progreso_estudiante?on_conflict=user_id,modulo_id"
+	# Reemplaza el INSERT/upsert directo contra progreso_estudiante (que no
+	# tenía forma de distinguir un guardado real de uno duplicado — ver
+	# sql/guardar_progreso_modulo.sql) por la RPC idempotente: la primera
+	# vez que ve este mision_id otorga XP e inserta en misiones_estudiante;
+	# las repeticiones (los mismos clics dobles que disparan
+	# _completar_mision() más de una vez — ver interior_bloque.gd,
+	# mision_solar.gd) solo actualizan intentos/% sin volver a sumar XP.
+	var url  := SUPABASE_URL + "/rest/v1/rpc/guardar_progreso_modulo"
 	var body := JSON.stringify({
-		"user_id"          : user_id,
-		"modulo_id"        : modulo_id,
-		"puntaje_obtenido" : puntaje,
-		"xp_ganada"        : xp,
-		"completado"       : completado
+		"p_modulo_id"      : modulo_id,
+		"p_mision_id"      : mision_id,
+		"p_xp_delta"       : xp,
+		"p_completitud_pct": puntaje,
+		"p_completado"     : completado
 	})
-	var hdrs := _headers_auth()
-	hdrs.append("Prefer: resolution=merge-duplicates")
-	_encolar("guardar_progreso", url, HTTPClient.METHOD_POST, hdrs, body)
+	_encolar("guardar_progreso", url, HTTPClient.METHOD_POST, _headers_auth(), body,
+			 {"mision_id": mision_id, "xp_local": xp})
 
 
 # ── EVENTOS DE APRENDIZAJE ───────────────────────────────────
@@ -222,11 +234,15 @@ func _registrar_evento_local(evento: Dictionary) -> void:
 # ── MANEJADOR CENTRAL ─────────────────────────────────────────
 func _on_respuesta_http(result: int, code: int, hdrs: PackedStringArray, body: PackedByteArray) -> void:
 	var accion := _accion_actual
+	var ctx    := _ctx_actual
 	_accion_actual = ""
+	_ctx_actual    = {}
 	_ocupado       = false
 
 	if result != HTTPRequest.RESULT_SUCCESS:
 		emit_signal("error_red", "Sin conexión. Código: " + str(result))
+		if accion == "guardar_progreso":
+			emit_signal("progreso_guardado_fallido", str(ctx.get("mision_id", "")), int(ctx.get("xp_local", 0)))
 		_despachar()
 		return
 
@@ -241,7 +257,7 @@ func _on_respuesta_http(result: int, code: int, hdrs: PackedStringArray, body: P
 		"nueva_contrasena": _procesar_nueva_contrasena(code, datos)
 		"cargar_modulos"  : _procesar_modulos(code, datos)
 		"cargar_progreso" : _procesar_progreso(code, datos)
-		"guardar_progreso": _procesar_guardar(code)
+		"guardar_progreso": _procesar_guardar(code, datos, ctx)
 		"cargar_ranking"  : _procesar_ranking(code, datos)
 		"registrar_evento": _procesar_evento(code)
 
@@ -351,11 +367,20 @@ func _procesar_progreso(code: int, datos: Variant) -> void:
 		emit_signal("error_red", "No se pudo cargar el progreso.")
 
 
-func _procesar_guardar(code: int) -> void:
-	if code in [200, 201]:
-		emit_signal("progreso_guardado")
+func _procesar_guardar(code: int, datos: Variant, ctx: Dictionary) -> void:
+	var mision_id := str(ctx.get("mision_id", ""))
+	var xp_local  := int(ctx.get("xp_local", 0))
+	if code in [200, 201] and datos is Dictionary:
+		var xp_otorgada  : int  = int(datos.get("xp_otorgada", 0))
+		var ya_registrada: bool = bool(datos.get("ya_registrada", false))
+		emit_signal("progreso_guardado", mision_id, xp_otorgada, ya_registrada, xp_otorgada - xp_local)
 	else:
+		# La RPC devuelve códigos de error propios (42501/22023/23503) que no
+		# necesitamos distinguir del lado del cliente todavía: en todos los
+		# casos el XP que _aplicar_xp() ya sumó de forma optimista hay que
+		# revertirlo, porque el servidor no lo otorgó.
 		emit_signal("error_red", "No se pudo guardar el progreso.")
+		emit_signal("progreso_guardado_fallido", mision_id, xp_local)
 
 
 func _procesar_evento(code: int) -> void:

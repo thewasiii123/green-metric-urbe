@@ -532,6 +532,8 @@ func _ready() -> void:
 
 	SupabaseManager.modulos_cargados.connect(_on_modulos_cargados)
 	SupabaseManager.progreso_cargado.connect(_on_progreso_cargado)
+	SupabaseManager.progreso_guardado.connect(_on_progreso_guardado)
+	SupabaseManager.progreso_guardado_fallido.connect(_on_progreso_guardado_fallido)
 	SupabaseManager.cargar_modulos()
 	# cargar_progreso se llama desde _on_modulos_cargados para no saturar el HTTPRequest
 
@@ -975,7 +977,16 @@ func _on_quiz_completado(xp: int) -> void:
 	EconomiaManager.on_modulo_completado(_modulo_activo, xp, 30)
 
 func _on_minijuego_completado(xp: int) -> void:
-	_aplicar_xp(xp, "mision_residuos")
+	# "mision_residuos_minijuego", NO "mision_residuos": ese id ya lo usa
+	# la zona del NPC Yulimar (ZONA_A_MISION, quiz real de reciclaje).
+	# Compartirlo era inofensivo antes (guardar_progreso() no distinguía
+	# duplicados); con la RPC idempotente (misiones_estudiante, PK
+	# user_id+mision_id) colisiona: quien complete segundo — el minijuego
+	# bonus o el quiz de Yulimar — no volvería a recibir XP nunca. Además
+	# reusar "mision_residuos" acá disparaba sin querer la rama legacy de
+	# _aplicar_xp() (el loop de ZONA_A_MISION), que ya manda su propio
+	# guardar_progreso() — duplicaba la llamada de red en cada partida.
+	_aplicar_xp(xp, "mision_residuos_minijuego")
 	EconomiaManager.ganar_creditos(xp / 5)
 	# Actualizar progreso M3 en sidebar (10 aciertos = 50 XP máx → 100%)
 	var pct  : float = clampf(float(xp) / 50.0, 0.0, 1.0)
@@ -991,7 +1002,8 @@ func _on_minijuego_completado(xp: int) -> void:
 	# completado va a ser irreversible. Se manda el % y el completado
 	# reales del módulo, igual que el resto de los callbacks.
 	var nm3 = _nivel_mgr()
-	SupabaseManager.guardar_progreso(3, int((nm3.pct_nivel(3) if nm3 else 0.0) * 100), xp,
+	SupabaseManager.guardar_progreso(3, "mision_residuos_minijuego",
+		int((nm3.pct_nivel(3) if nm3 else 0.0) * 100), xp,
 		nm3.nivel_completo(3) if nm3 else false)
 	_mostrar_mision_completada("mision_residuos", xp)
 
@@ -1031,12 +1043,35 @@ func _aplicar_xp(xp: int, mision_id: String) -> void:
 			# haber hecho sus misiones reales, ahora que es irreversible.
 			if SupabaseManager and SupabaseManager.has_method("guardar_progreso"):
 				var nm_legacy = _nivel_mgr()
-				SupabaseManager.guardar_progreso(mod_id,
+				SupabaseManager.guardar_progreso(mod_id, mision_id,
 					int((nm_legacy.pct_nivel(mod_id) if nm_legacy else 0.0) * 100), xp,
 					nm_legacy.nivel_completo(mod_id) if nm_legacy else false)
 			_sfx("mision")
 			_verificar_misiones_completadas()
 			break
+
+
+# ── Reconciliación de XP con el servidor ────────────────────
+# _aplicar_xp() suma el xp local de forma optimista ANTES de que
+# guardar_progreso() reciba respuesta (para que el HUD reaccione al
+# instante). Estas dos señales corrigen esa suma con lo que la RPC
+# idempotente realmente otorgó — así el HUD termina reflejando siempre
+# lo que el servidor contó, no el valor local, incluso si un clic
+# duplicado disparó _completar_mision() más de una vez para la misma
+# misión (ver interior_bloque.gd / mision_solar.gd).
+func _on_progreso_guardado(mision_id: String, xp_otorgada: int, ya_registrada: bool, correccion_xp: int) -> void:
+	if ya_registrada:
+		print("SupabaseManager: guardado duplicado de '%s' — no se otorgó XP de nuevo (otorgada: %d)" % [mision_id, xp_otorgada])
+	if correccion_xp != 0:
+		_xp_total = max(0, _xp_total + correccion_xp)
+		_actualizar_hud()
+
+
+func _on_progreso_guardado_fallido(mision_id: String, xp_local: int) -> void:
+	if xp_local != 0:
+		push_warning("SupabaseManager: no se pudo confirmar el guardado de '%s' — revirtiendo %d XP local." % [mision_id, xp_local])
+		_xp_total = max(0, _xp_total - xp_local)
+		_actualizar_hud()
 
 
 # ── Celebración ──────────────────────────────────────────────
@@ -2587,7 +2622,7 @@ func _on_mision_plantar_completada(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[1] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_verde()
-	SupabaseManager.guardar_progreso(1, int(pct * 100), xp, nm.nivel_completo(1) if nm else false)
+	SupabaseManager.guardar_progreso(1, mision_id, int(pct * 100), xp, nm.nivel_completo(1) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🌿 Plantación completada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2633,7 +2668,7 @@ func _on_interior_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(2) if nm else 0.0
 	_progreso_modulos[2] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(2, int(pct * 100), xp, nm.nivel_completo(2) if nm else false)
+	SupabaseManager.guardar_progreso(2, mision_id, int(pct * 100), xp, nm.nivel_completo(2) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("⚡ LED completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2646,7 +2681,7 @@ func _on_reciclaje_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(3) if nm else 0.0
 	_progreso_modulos[3] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(3, int(pct * 100), xp, nm.nivel_completo(3) if nm else false)
+	SupabaseManager.guardar_progreso(3, mision_id, int(pct * 100), xp, nm.nivel_completo(3) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("♻ Reciclaje completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2659,7 +2694,7 @@ func _on_solar_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(2) if nm else 0.0
 	_progreso_modulos[2] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(2, int(pct * 100), xp, nm.nivel_completo(2) if nm else false)
+	SupabaseManager.guardar_progreso(2, mision_id, int(pct * 100), xp, nm.nivel_completo(2) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("☀️ Solar completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2673,7 +2708,7 @@ func _on_llave_cerrada(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[4] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_agua()
-	SupabaseManager.guardar_progreso(4, int(pct * 100), xp, nm.nivel_completo(4) if nm else false)
+	SupabaseManager.guardar_progreso(4, mision_id, int(pct * 100), xp, nm.nivel_completo(4) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("💧 Llave cerrada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2687,7 +2722,7 @@ func _on_captacion_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[4] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_agua()
-	SupabaseManager.guardar_progreso(4, int(pct * 100), xp, nm.nivel_completo(4) if nm else false)
+	SupabaseManager.guardar_progreso(4, mision_id, int(pct * 100), xp, nm.nivel_completo(4) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🌧 Captación completada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2700,7 +2735,7 @@ func _on_movilidad_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(5) if nm else 0.0
 	_progreso_modulos[5] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(5, int(pct * 100), xp, nm.nivel_completo(5) if nm else false)
+	SupabaseManager.guardar_progreso(5, mision_id, int(pct * 100), xp, nm.nivel_completo(5) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🚲 Decisión de movilidad tomada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2713,7 +2748,7 @@ func _on_bicicletero_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(5) if nm else 0.0
 	_progreso_modulos[5] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(5, int(pct * 100), xp, nm.nivel_completo(5) if nm else false)
+	SupabaseManager.guardar_progreso(5, mision_id, int(pct * 100), xp, nm.nivel_completo(5) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🚲 Bicicletero instalado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2727,7 +2762,7 @@ func _on_malla_verde_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[6] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_edu()
-	SupabaseManager.guardar_progreso(6, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
+	SupabaseManager.guardar_progreso(6, mision_id, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("📚 Malla verde aprobada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2741,7 +2776,7 @@ func _on_comite_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[6] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_edu()
-	SupabaseManager.guardar_progreso(6, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
+	SupabaseManager.guardar_progreso(6, mision_id, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🗣 Comité Ambiental formado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2755,7 +2790,7 @@ func _on_semana_verde_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[6] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_edu()
-	SupabaseManager.guardar_progreso(6, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
+	SupabaseManager.guardar_progreso(6, mision_id, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🎪 Semana Verde organizada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2769,7 +2804,7 @@ func _on_informe_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[6] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_edu()
-	SupabaseManager.guardar_progreso(6, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
+	SupabaseManager.guardar_progreso(6, mision_id, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("📄 Informe de Sostenibilidad publicado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
