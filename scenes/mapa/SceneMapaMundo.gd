@@ -982,7 +982,17 @@ func _on_minijuego_completado(xp: int) -> void:
 	var prev : float = float(_progreso_modulos.get(3, 0.0))
 	_progreso_modulos[3] = clampf(prev + pct * 0.5, 0.0, 1.0)
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(3, int(pct * 100), xp, xp >= 40)
+	# El minijuego es un bonus aparte, no una de las 6 misiones de reciclaje
+	# que cuenta NivelManager — así que su % de acierto propio (pct) y su
+	# xp>=40 propio NO representan el estado real del módulo 3. Antes se
+	# mandaban tal cual a progreso_estudiante, lo que podía marcar
+	# completado=true con una sola buena partida del minijuego aunque no
+	# se hubiera hecho ninguna misión real de reciclaje — grave ahora que
+	# completado va a ser irreversible. Se manda el % y el completado
+	# reales del módulo, igual que el resto de los callbacks.
+	var nm3 = _nivel_mgr()
+	SupabaseManager.guardar_progreso(3, int((nm3.pct_nivel(3) if nm3 else 0.0) * 100), xp,
+		nm3.nivel_completo(3) if nm3 else false)
 	_mostrar_mision_completada("mision_residuos", xp)
 
 func _aplicar_xp(xp: int, mision_id: String) -> void:
@@ -1012,9 +1022,18 @@ func _aplicar_xp(xp: int, mision_id: String) -> void:
 			_progreso_modulos[mod_id] = nuevo
 			_actualizar_sidebar()
 			_mostrar_mision_completada(mision_id, xp)
-			# Persistir en Supabase
+			# Persistir en Supabase — usa el % y el completado REALES de
+			# NivelManager, no `nuevo` (el contador propio y desconectado
+			# de este sistema viejo de NPCs/quiz: +0.20 por diálogo,
+			# nada que ver con las misiones de mapa que sí cuenta
+			# NivelManager). Mismo motivo que el fix del minijuego de
+			# residuos — evita marcar completado=true de un módulo sin
+			# haber hecho sus misiones reales, ahora que es irreversible.
 			if SupabaseManager and SupabaseManager.has_method("guardar_progreso"):
-				SupabaseManager.guardar_progreso(mod_id, xp, int(nuevo * 100), nuevo >= 1.0)
+				var nm_legacy = _nivel_mgr()
+				SupabaseManager.guardar_progreso(mod_id,
+					int((nm_legacy.pct_nivel(mod_id) if nm_legacy else 0.0) * 100), xp,
+					nm_legacy.nivel_completo(mod_id) if nm_legacy else false)
 			_sfx("mision")
 			_verificar_misiones_completadas()
 			break
@@ -2568,7 +2587,7 @@ func _on_mision_plantar_completada(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[1] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_verde()
-	SupabaseManager.guardar_progreso(1, xp, int(pct * 100), nm.nivel_completo(1) if nm else false)
+	SupabaseManager.guardar_progreso(1, int(pct * 100), xp, nm.nivel_completo(1) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🌿 Plantación completada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2614,7 +2633,7 @@ func _on_interior_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(2) if nm else 0.0
 	_progreso_modulos[2] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(2, xp, int(pct * 100), nm.nivel_completo(2) if nm else false)
+	SupabaseManager.guardar_progreso(2, int(pct * 100), xp, nm.nivel_completo(2) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("⚡ LED completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2627,7 +2646,7 @@ func _on_reciclaje_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(3) if nm else 0.0
 	_progreso_modulos[3] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(3, xp, int(pct * 100), nm.nivel_completo(3) if nm else false)
+	SupabaseManager.guardar_progreso(3, int(pct * 100), xp, nm.nivel_completo(3) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("♻ Reciclaje completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2640,7 +2659,7 @@ func _on_solar_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(2) if nm else 0.0
 	_progreso_modulos[2] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(2, xp, int(pct * 100), nm.nivel_completo(2) if nm else false)
+	SupabaseManager.guardar_progreso(2, int(pct * 100), xp, nm.nivel_completo(2) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("☀️ Solar completado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2654,7 +2673,7 @@ func _on_llave_cerrada(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[4] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_agua()
-	SupabaseManager.guardar_progreso(4, xp, int(pct * 100), nm.nivel_completo(4) if nm else false)
+	SupabaseManager.guardar_progreso(4, int(pct * 100), xp, nm.nivel_completo(4) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("💧 Llave cerrada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2668,7 +2687,7 @@ func _on_captacion_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[4] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_agua()
-	SupabaseManager.guardar_progreso(4, xp, int(pct * 100), nm.nivel_completo(4) if nm else false)
+	SupabaseManager.guardar_progreso(4, int(pct * 100), xp, nm.nivel_completo(4) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🌧 Captación completada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2681,7 +2700,7 @@ func _on_movilidad_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(5) if nm else 0.0
 	_progreso_modulos[5] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(5, xp, int(pct * 100), nm.nivel_completo(5) if nm else false)
+	SupabaseManager.guardar_progreso(5, int(pct * 100), xp, nm.nivel_completo(5) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🚲 Decisión de movilidad tomada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2694,7 +2713,7 @@ func _on_bicicletero_completado(mision_id: String, xp: int, ec: int) -> void:
 	var pct : float = nm.pct_nivel(5) if nm else 0.0
 	_progreso_modulos[5] = pct
 	_actualizar_sidebar()
-	SupabaseManager.guardar_progreso(5, xp, int(pct * 100), nm.nivel_completo(5) if nm else false)
+	SupabaseManager.guardar_progreso(5, int(pct * 100), xp, nm.nivel_completo(5) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🚲 Bicicletero instalado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2708,7 +2727,7 @@ func _on_malla_verde_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[6] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_edu()
-	SupabaseManager.guardar_progreso(6, xp, int(pct * 100), nm.nivel_completo(6) if nm else false)
+	SupabaseManager.guardar_progreso(6, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("📚 Malla verde aprobada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2722,7 +2741,7 @@ func _on_comite_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[6] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_edu()
-	SupabaseManager.guardar_progreso(6, xp, int(pct * 100), nm.nivel_completo(6) if nm else false)
+	SupabaseManager.guardar_progreso(6, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🗣 Comité Ambiental formado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2736,7 +2755,7 @@ func _on_semana_verde_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[6] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_edu()
-	SupabaseManager.guardar_progreso(6, xp, int(pct * 100), nm.nivel_completo(6) if nm else false)
+	SupabaseManager.guardar_progreso(6, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("🎪 Semana Verde organizada: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
@@ -2750,7 +2769,7 @@ func _on_informe_completado(mision_id: String, xp: int, ec: int) -> void:
 	_progreso_modulos[6] = pct
 	_actualizar_sidebar()
 	_actualizar_indicador_edu()
-	SupabaseManager.guardar_progreso(6, xp, int(pct * 100), nm.nivel_completo(6) if nm else false)
+	SupabaseManager.guardar_progreso(6, int(pct * 100), xp, nm.nivel_completo(6) if nm else false)
 	_mostrar_mision_completada(mision_id, xp)
 	_sfx("mision")
 	print("📄 Informe de Sostenibilidad publicado: %s | +%d XP | +%d EC" % [mision_id, xp, ec])
