@@ -40,6 +40,15 @@ var _rec_pass_confirmar : LineEdit = null
 var _btn_cambiar       : Button   = null
 var _msg_rec           : Label    = null
 
+# ── Validación de correo (idéntica a la del servidor) ─────────
+# La base rechaza dominios no permitidos, pero Supabase enmascara ese
+# error con un mensaje genérico e inútil — así que el formulario valida
+# lo mismo ANTES de llamar a /auth/v1/signup, para dar un mensaje claro.
+const EMAIL_REGEX          : String = "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+const DOMINIOS_PERMITIDOS  : Array  = ["urbe.edu", "gmail.com", "outlook.com",
+										"hotmail.com", "yahoo.com", "icloud.com"]
+var _re_email : RegEx = null
+
 # ── Estado ───────────────────────────────────────────────────
 var _cargando       : bool  = false
 var _tween_panel    : Tween = null
@@ -156,6 +165,9 @@ class LogoNode extends Node2D:
 # READY
 # ════════════════════════════════════════════════════════════
 func _ready() -> void:
+	_re_email = RegEx.new()
+	_re_email.compile(EMAIL_REGEX)
+
 	# Fondo oscuro y partículas
 	_bg_rect.color = Color(0.030, 0.065, 0.033, 1.0)
 	var bg := BackgroundNode.new()
@@ -619,7 +631,7 @@ func _on_login_pressed() -> void:
 func _on_registro_pressed() -> void:
 	var nombre   := _reg_nombre.text.strip_edges()
 	var cedula   := _reg_cedula.text.strip_edges()
-	var email    := _reg_email.text.strip_edges()
+	var email    := _reg_email.text.strip_edges().to_lower().replace(" ", "")
 	var pass_    := _reg_pass.text
 	var confirm_ := _reg_confirm.text
 	var carrera   := _reg_carrera.get_item_text(_reg_carrera.selected)
@@ -628,8 +640,9 @@ func _on_registro_pressed() -> void:
 	if nombre.is_empty() or cedula.is_empty() or email.is_empty() or pass_.is_empty():
 		_msg(_msg_reg, "Completa todos los campos obligatorios (*).", Color(0.98, 0.82, 0.12))
 		_shake(_panel_reg); return
-	if not email.contains("@"):
-		_msg(_msg_reg, "El correo no es válido.", Color(0.98, 0.82, 0.12))
+	var error_email := _validar_email(email)
+	if not error_email.is_empty():
+		_msg(_msg_reg, error_email, Color(0.98, 0.82, 0.12))
 		_shake(_panel_reg); return
 	if pass_.length() < 6:
 		_msg(_msg_reg, "La contraseña debe tener al menos 6 caracteres.", Color(0.98, 0.82, 0.12))
@@ -786,6 +799,18 @@ func _set_cargando(estado: bool) -> void:
 	if estado:
 		_spinner_idx   = 0
 		_spinner_timer = 0.0
+
+
+# Devuelve "" si el correo es válido, o el mensaje de error a mostrar.
+# Recibe el correo ya normalizado (minúsculas, sin espacios) — normalizar
+# es responsabilidad de quien llama, para no normalizar dos veces.
+func _validar_email(email: String) -> String:
+	if not _re_email.search(email):
+		return "Ese correo no parece válido. Revisá que tenga @ y un dominio."
+	var dominio := email.split("@")[-1]
+	if not (dominio in DOMINIOS_PERMITIDOS):
+		return "Usá tu correo @urbe.edu, o uno de Gmail, Outlook, Hotmail, Yahoo o iCloud."
+	return ""
 
 
 func _msg(label: Label, texto: String, color: Color) -> void:

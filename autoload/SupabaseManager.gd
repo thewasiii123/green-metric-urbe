@@ -272,6 +272,14 @@ func _procesar_registro(code: int, datos: Variant) -> void:
 		var msg : String = "No se pudo crear la cuenta."
 		if datos is Dictionary:
 			msg = datos.get("error_description", datos.get("msg", datos.get("message", msg)))
+		# La base rechaza dominios de correo no permitidos y Supabase lo
+		# reporta como "Database error ..." — un mensaje inútil para el
+		# estudiante. El formulario ya valida el dominio antes de llamar
+		# aquí (ver SceneLogin._validar_email), así que si esto se dispara
+		# es porque alguien se saltó esa validación (llamada directa a la
+		# API, por ejemplo) — mismo mensaje claro de todas formas.
+		if msg.contains("Database error"):
+			msg = "No pudimos crear la cuenta con ese correo. Revisá que sea @urbe.edu o un correo personal válido."
 		emit_signal("registro_fallido", msg)
 
 
