@@ -50,6 +50,10 @@ const DOMINIOS_PERMITIDOS  : Array  = ["urbe.edu", "gmail.com", "outlook.com",
 var _re_email : RegEx = null
 
 # ── Estado ───────────────────────────────────────────────────
+# true mientras la sesión de SupabaseManager.login() en curso viene de un
+# registro sin sesión (signup 200 sin access_token), no de que el usuario
+# tocó "Iniciar sesión" — cambia cómo se interpreta login_fallido.
+var _login_es_post_registro : bool = false
 var _cargando       : bool  = false
 var _tween_panel    : Tween = null
 var _spinner_label  : Label = null
@@ -178,6 +182,7 @@ func _ready() -> void:
 	SupabaseManager.login_exitoso.connect(_en_login_exitoso)
 	SupabaseManager.login_fallido.connect(_en_login_fallido)
 	SupabaseManager.registro_exitoso.connect(_en_registro_exitoso)
+	SupabaseManager.registro_sin_sesion.connect(_en_registro_sin_sesion)
 	SupabaseManager.registro_fallido.connect(_en_registro_fallido)
 	SupabaseManager.recuperacion_enviada.connect(_en_recuperacion_enviada)
 	SupabaseManager.recuperacion_fallida.connect(_en_recuperacion_fallida)
@@ -613,6 +618,7 @@ func _cambiar_panel(cual: String) -> void:
 # ACCIONES
 # ════════════════════════════════════════════════════════════
 func _on_login_pressed() -> void:
+	_login_es_post_registro = false
 	var email := _email_in.text.strip_edges()
 	var pass_ := _pass_in.text
 	if email.is_empty() or pass_.is_empty():
@@ -703,6 +709,7 @@ func _on_cambiar_pass_pressed() -> void:
 # ════════════════════════════════════════════════════════════
 func _en_login_exitoso(_datos: Dictionary) -> void:
 	_set_cargando(false)
+	_login_es_post_registro = false
 	_msg(_msg_login, "¡Bienvenido al campus!", Color(0.28, 0.95, 0.45))
 	var tw := create_tween()
 	tw.tween_property(_center, "modulate:a", 0.0, 0.5)
@@ -712,30 +719,66 @@ func _en_login_exitoso(_datos: Dictionary) -> void:
 
 func _en_login_fallido(error: String) -> void:
 	_set_cargando(false)
+	if _login_es_post_registro:
+		_login_es_post_registro = false
+		_resolver_login_post_registro_fallido(error)
+		return
 	_msg(_msg_login, error, Color(0.95, 0.30, 0.30))
 	_shake(_center)
 
 
-func _en_registro_exitoso(usuario: Dictionary) -> void:
+# El registro sí guardó sesión (signup devolvió access_token) — entrar
+# directo, sin ningún mensaje de error de por medio.
+func _en_registro_exitoso(_usuario: Dictionary) -> void:
 	_set_cargando(false)
-	if not SupabaseManager.jwt_token.is_empty():
-		_msg(_msg_reg, "¡Cuenta creada! Entrando al campus...", Color(0.28, 0.95, 0.45))
-		await get_tree().create_timer(1.0).timeout
-		get_tree().change_scene_to_file("res://scenes/mapa/scene_mapa_mundo.tscn")
-	else:
-		var correo : String = usuario.get("email", _reg_email.text)
-		_msg(_msg_reg,
-			"¡Cuenta creada!\nRevisa tu correo (%s)\ny confírmalo para iniciar sesión." % correo,
-			Color(0.28, 0.95, 0.45))
-		await get_tree().create_timer(4.0).timeout
-		_cambiar_panel("login")
-		_email_in.text = _reg_email.text
+	_msg(_msg_reg, "¡Cuenta creada! Entrando al campus...", Color(0.28, 0.95, 0.45))
+	await get_tree().create_timer(1.0).timeout
+	get_tree().change_scene_to_file("res://scenes/mapa/scene_mapa_mundo.tscn")
+
+
+# El signup respondió 200 pero sin sesión (con "user" legible o con el
+# cuerpo ilegible — a esta altura da igual cuál). En vez de adivinar el
+# estado de la cuenta, probamos loguearnos con las credenciales que ya
+# están en los campos del formulario y actuamos según ESA respuesta.
+func _en_registro_sin_sesion() -> void:
+	_msg(_msg_reg, "Verificando tu cuenta...", Color(0.65, 0.90, 0.70))
+	_login_es_post_registro = true
+	var email := _reg_email.text.strip_edges().to_lower().replace(" ", "")
+	SupabaseManager.login(email, _reg_pass.text)
 
 
 func _en_registro_fallido(error: String) -> void:
 	_set_cargando(false)
 	_msg(_msg_reg, error, Color(0.95, 0.30, 0.30))
 	_shake(_panel_reg)
+
+
+# Falló el login automático post-registro. La cuenta se creó igual (el
+# signup devolvió 200) — nunca mostramos esto como error, y precargamos
+# el correo en el panel de login para que solo falte la contraseña.
+func _resolver_login_post_registro_fallido(error: String) -> void:
+	var email := _reg_email.text.strip_edges().to_lower().replace(" ", "")
+	var msg   : String
+	var color : Color
+	if _es_error_correo_no_confirmado(error):
+		msg   = "Cuenta creada. Te enviamos un correo para confirmarla. Confirmala y volvé a iniciar sesión acá."
+		color = Color(0.28, 0.95, 0.45)   # mismo verde de éxito que ya usa el formulario
+	else:
+		msg   = "Tu cuenta se creó. Iniciá sesión para entrar."
+		color = Color(0.65, 0.90, 0.70)   # mismo neutro que "Conectando..." / "Creando cuenta..."
+	_cambiar_panel("login")
+	_email_in.text = email
+	_msg(_msg_login, msg, color)
+
+
+# No pude verificar en vivo el texto exacto que devuelve Supabase para
+# "correo no confirmado" (sin acceso a Supabase en esta sesión) — cubre
+# las variantes conocidas de GoTrue. Si no matchea, cae al mensaje
+# genérico de _resolver_login_post_registro_fallido(), que es igual de
+# correcto (así lo pediste).
+func _es_error_correo_no_confirmado(error: String) -> bool:
+	var e := error.to_lower()
+	return e.contains("not confirmed") or e.contains("not_confirmed") or e.contains("confirm")
 
 
 func _en_recuperacion_enviada() -> void:

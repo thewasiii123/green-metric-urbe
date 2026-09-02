@@ -11,6 +11,7 @@ const SUPABASE_ANON_KEY: String = "sb_publishable_I7BlsHi98fLy-Yuq8NTtFQ_8tw6r44
 signal login_exitoso(datos: Dictionary)
 signal login_fallido(error: String)
 signal registro_exitoso(datos: Dictionary)
+signal registro_sin_sesion()
 signal registro_fallido(error: String)
 signal recuperacion_enviada()
 signal recuperacion_fallida(error: String)
@@ -210,7 +211,7 @@ func _registrar_evento_local(evento: Dictionary) -> void:
 
 
 # ── MANEJADOR CENTRAL ─────────────────────────────────────────
-func _on_respuesta_http(result: int, code: int, _hdrs: PackedStringArray, body: PackedByteArray) -> void:
+func _on_respuesta_http(result: int, code: int, hdrs: PackedStringArray, body: PackedByteArray) -> void:
 	var accion := _accion_actual
 	_accion_actual = ""
 	_ocupado       = false
@@ -225,7 +226,7 @@ func _on_respuesta_http(result: int, code: int, _hdrs: PackedStringArray, body: 
 
 	match accion:
 		"login"           : _procesar_login(code, datos)
-		"registro"        : _procesar_registro(code, datos)
+		"registro"        : _procesar_registro(code, datos, texto, hdrs)
 		"recuperar"       : _procesar_recuperar(code, datos)
 		"verificar_codigo": _procesar_verificar_codigo(code, datos)
 		"nueva_contrasena": _procesar_nueva_contrasena(code, datos)
@@ -249,25 +250,34 @@ func _procesar_login(code: int, datos: Variant) -> void:
 	else:
 		var msg : String = "Credenciales incorrectas."
 		if datos is Dictionary:
-			msg = datos.get("error_description", datos.get("msg", msg))
+			msg = datos.get("error_description",
+					datos.get("msg", datos.get("error_code", msg)))
 		emit_signal("login_fallido", msg)
 
 
-func _procesar_registro(code: int, datos: Variant) -> void:
-	if code in [200, 201] and datos is Dictionary and datos.has("user"):
+func _procesar_registro(code: int, datos: Variant, cuerpo_crudo: String, headers: PackedStringArray) -> void:
+	var tiene_sesion : bool = datos is Dictionary and datos.has("access_token") \
+		and not str(datos.get("access_token", "")).is_empty()
+
+	if code in [200, 201] and tiene_sesion:
 		var usuario = datos.get("user", {})
 		user_id   = usuario.get("id", "")
-		jwt_token = datos.get("access_token", "")   # vacío si requiere confirmar email
+		jwt_token = datos.get("access_token", "")
 		emit_signal("registro_exitoso", usuario)
 	elif code in [200, 201]:
-		# El servidor confirmó que la cuenta se creó (200/201) pero el
-		# cuerpo no se pudo leer como el JSON esperado — no es un fallo
-		# del registro, es un problema leyendo la respuesta. Antes esto
-		# caía al mensaje genérico de abajo ("No se pudo crear la
-		# cuenta"), que es falso en este caso: la cuenta sí se crea.
-		# Reproduce el síntoma reportado el 1-sep-2026 21:39.
-		emit_signal("registro_fallido",
-			"Tu cuenta se creó, pero no pudimos leer la respuesta del servidor. Probá iniciar sesión con tu correo y contraseña.")
+		# La cuenta SÍ se creó (200/201) pero no vino sesión — con o sin
+		# "user" legible en el cuerpo. En vez de adivinar el estado desde
+		# acá, quien llama (SceneLogin) intenta un login automático con
+		# las credenciales que ya tiene en memoria y actúa según ESA
+		# respuesta — ver registro_sin_sesion().
+		if not (datos is Dictionary):
+			# Instrumentación: el caso "no parsea" sigue sin diagnosticarse
+			# del todo (reproduce el síntoma del 1-sep-2026 21:39). El login
+			# automático ya resuelve la UX, pero esto queda para cerrar la
+			# causa: ¿qué manda el servidor exactamente acá?
+			print("SupabaseManager: signup 200 con cuerpo no parseable — bytes=%d cuerpo=%s headers=%s"
+				% [cuerpo_crudo.to_utf8_buffer().size(), cuerpo_crudo, headers])
+		emit_signal("registro_sin_sesion")
 	else:
 		var msg : String = "No se pudo crear la cuenta."
 		if datos is Dictionary:
