@@ -70,7 +70,13 @@ func _despachar() -> void:
 	_ocupado = true
 	var p : Dictionary = _cola.pop_front()
 	_accion_actual = p["accion"]
-	_http.request(p["url"], p["hdrs"], p["metodo"], p["body"])
+	# DIAGNÓSTICO TEMPORAL — si .request() devuelve error, no dispara
+	# request_completed y _ocupado se queda en true para siempre: la cola
+	# quedaría trabada en silencio desde ese punto en adelante. Ver
+	# guardar_progreso() para el contexto (cero POST en toda una sesión).
+	var err := _http.request(p["url"], p["hdrs"], p["metodo"], p["body"])
+	if err != OK:
+		print("SupabaseManager: _http.request() falló al despachar '%s' — error=%d. La cola queda trabada." % [p["accion"], err])
 
 
 # ── LOGIN ─────────────────────────────────────────────────────
@@ -146,10 +152,23 @@ func cargar_ranking() -> void:
 
 
 func guardar_progreso(modulo_id: int, puntaje: int, xp: int, completado: bool) -> void:
+	# DIAGNÓSTICO TEMPORAL — se registraron cero POST a progreso_estudiante
+	# durante toda la sesión de Nivel 2 (según logs del servidor), pese a que
+	# el código de las misiones de LED/solar llama a esta función igual que
+	# las de Nivel 1 (que sí se registraron). Esto confirma si la función
+	# se llega a llamar y en qué estado está la cola en ese momento.
+	print("SupabaseManager: guardar_progreso(modulo=%d) llamado — jwt_vacio=%s ocupado=%s cola=%d"
+		% [modulo_id, jwt_token.is_empty(), _ocupado, _cola.size()])
 	if jwt_token.is_empty():
 		push_error("SupabaseManager: Debes hacer login primero.")
 		return
-	var url  := SUPABASE_URL + "/rest/v1/progreso_estudiante"
+	# on_conflict es obligatorio para que "Prefer: resolution=merge-duplicates"
+	# haga algo: sin esto, PostgREST resuelve el conflicto contra la PK de la
+	# tabla (no contra el índice único real de user_id+modulo_id), así que
+	# el INSERT seguía chocando con esa restricción y devolvía 409 en la
+	# segunda misión de cada módulo en adelante — confirmado con logs reales
+	# del servidor (201 la primera vez, 409 después).
+	var url  := SUPABASE_URL + "/rest/v1/progreso_estudiante?on_conflict=user_id,modulo_id"
 	var body := JSON.stringify({
 		"user_id"          : user_id,
 		"modulo_id"        : modulo_id,
@@ -235,7 +254,13 @@ func _on_respuesta_http(result: int, code: int, hdrs: PackedStringArray, body: P
 		"nueva_contrasena": _procesar_nueva_contrasena(code, datos)
 		"cargar_modulos"  : _procesar_modulos(code, datos)
 		"cargar_progreso" : _procesar_progreso(code, datos)
-		"guardar_progreso": _procesar_guardar(code)
+		"guardar_progreso":
+			# DIAGNÓSTICO TEMPORAL — quitar una vez confirmado que guarda
+			# (progreso_estudiante tiene 0 filas en toda la historia del
+			# proyecto; el 31-ago falló un POST con 409 por FK, ya arreglado
+			# del lado de la base pero nunca reprobado).
+			print("SupabaseManager: POST progreso_estudiante -> code=%d body=%s" % [code, texto])
+			_procesar_guardar(code)
 		"cargar_ranking"  : _procesar_ranking(code, datos)
 		"registrar_evento": _procesar_evento(code)
 
