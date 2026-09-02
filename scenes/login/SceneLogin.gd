@@ -20,17 +20,25 @@ var _reg_nombre  : LineEdit = null
 var _reg_cedula  : LineEdit = null
 var _reg_email   : LineEdit = null
 var _reg_carrera : OptionButton = null
-var _reg_semestre: OptionButton = null
+var _reg_trimestre: OptionButton = null
 var _reg_pass    : LineEdit = null
 var _reg_confirm : LineEdit = null
 var _btn_crear   : Button   = null
 var _msg_reg     : Label    = null
 
-# ── Panel Recuperar ───────────────────────────────────────────
-var _panel_rec   : Control  = null
-var _rec_email   : LineEdit = null
-var _btn_enviar  : Button   = null
-var _msg_rec     : Label    = null
+# ── Panel Recuperar (3 pasos: código → verificar → nueva clave) ──
+var _panel_rec        : Control  = null
+var _rec_paso1         : Control  = null
+var _rec_paso2         : Control  = null
+var _rec_paso3         : Control  = null
+var _rec_email         : LineEdit = null
+var _btn_enviar        : Button   = null
+var _rec_codigo        : LineEdit = null
+var _btn_verificar     : Button   = null
+var _rec_pass_nueva     : LineEdit = null
+var _rec_pass_confirmar : LineEdit = null
+var _btn_cambiar       : Button   = null
+var _msg_rec           : Label    = null
 
 # ── Estado ───────────────────────────────────────────────────
 var _cargando       : bool  = false
@@ -161,6 +169,10 @@ func _ready() -> void:
 	SupabaseManager.registro_fallido.connect(_en_registro_fallido)
 	SupabaseManager.recuperacion_enviada.connect(_en_recuperacion_enviada)
 	SupabaseManager.recuperacion_fallida.connect(_en_recuperacion_fallida)
+	SupabaseManager.codigo_verificado.connect(_en_codigo_verificado)
+	SupabaseManager.codigo_fallido.connect(_en_codigo_fallido)
+	SupabaseManager.contrasena_actualizada.connect(_en_contrasena_actualizada)
+	SupabaseManager.actualizar_contrasena_fallido.connect(_en_actualizar_contrasena_fallido)
 	SupabaseManager.error_red.connect(_en_error_red)
 
 	_pass_in.secret = true
@@ -188,7 +200,9 @@ func _ready() -> void:
 	# Conexiones botones login
 	_btn_login.pressed.connect(_on_login_pressed)
 	_btn_reg.pressed.connect(func(): _cambiar_panel("registro"))
-	btn_olvide.pressed.connect(func(): _cambiar_panel("recuperar"))
+	btn_olvide.pressed.connect(func():
+		_resetear_panel_recuperacion()
+		_cambiar_panel("recuperar"))
 
 	# Hover en botón principal
 	_btn_login.mouse_entered.connect(func():
@@ -371,12 +385,12 @@ func _crear_panel_registro() -> void:
 	_estilizar_option(_reg_carrera)
 	vbox.add_child(_reg_carrera)
 
-	_lbl(vbox, "Semestre:")
-	_reg_semestre = OptionButton.new()
-	for i in range(1, 11):
-		_reg_semestre.add_item("Semestre %d" % i)
-	_estilizar_option(_reg_semestre)
-	vbox.add_child(_reg_semestre)
+	_lbl(vbox, "Trimestre:")
+	_reg_trimestre = OptionButton.new()
+	for i in range(1, 13):
+		_reg_trimestre.add_item("Trimestre %d" % i)
+	_estilizar_option(_reg_trimestre)
+	vbox.add_child(_reg_trimestre)
 
 	_lbl_sec(vbox, "Acceso")
 	_reg_email   = _campo(vbox, "Correo electrónico *")
@@ -412,25 +426,84 @@ func _crear_panel_recuperacion() -> void:
 	_titulo(vbox, "Recuperar Contraseña")
 	vbox.add_child(HSeparator.new())
 
-	var desc := Label.new()
-	desc.text = "Ingresa tu correo registrado y te enviaremos\nun enlace para restablecer tu contraseña."
-	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
-	desc.add_theme_color_override("font_color", Color(0.58, 0.75, 0.62))
-	desc.add_theme_font_size_override("font_size", 12)
-	vbox.add_child(desc)
+	# ── Paso 1: pedir el código por correo ──────────────────────
+	_rec_paso1 = VBoxContainer.new()
+	_rec_paso1.add_theme_constant_override("separation", 10)
+	vbox.add_child(_rec_paso1)
 
-	vbox.add_child(HSeparator.new())
-	_rec_email = _campo(vbox, "Correo electrónico registrado")
-	vbox.add_child(HSeparator.new())
+	var desc1 := Label.new()
+	desc1.text = "Ingresa tu correo registrado y te enviaremos\nun código de 6 dígitos para restablecer tu contraseña."
+	desc1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc1.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc1.add_theme_color_override("font_color", Color(0.58, 0.75, 0.62))
+	desc1.add_theme_font_size_override("font_size", 12)
+	_rec_paso1.add_child(desc1)
+
+	_rec_email = _campo(_rec_paso1, "Correo electrónico registrado")
 
 	_btn_enviar = Button.new()
-	_btn_enviar.text = "Enviar correo de recuperación"
+	_btn_enviar.text = "Enviar código"
 	_estilizar_btn_primario(_btn_enviar)
 	_btn_enviar.mouse_entered.connect(func(): _escalar_btn(_btn_enviar, 1.04))
 	_btn_enviar.mouse_exited.connect(func(): _escalar_btn(_btn_enviar, 1.0))
-	vbox.add_child(_btn_enviar)
+	_rec_paso1.add_child(_btn_enviar)
 	_btn_enviar.pressed.connect(_on_recuperar_pressed)
+
+	# ── Paso 2: canjear el código ────────────────────────────────
+	_rec_paso2 = VBoxContainer.new()
+	_rec_paso2.add_theme_constant_override("separation", 10)
+	_rec_paso2.visible = false
+	vbox.add_child(_rec_paso2)
+
+	var desc2 := Label.new()
+	desc2.text = "Ingresa el código de 6 dígitos que te enviamos por correo."
+	desc2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc2.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc2.add_theme_color_override("font_color", Color(0.58, 0.75, 0.62))
+	desc2.add_theme_font_size_override("font_size", 12)
+	_rec_paso2.add_child(desc2)
+
+	_rec_codigo = _campo(_rec_paso2, "Código de 6 dígitos")
+
+	_btn_verificar = Button.new()
+	_btn_verificar.text = "Verificar código"
+	_estilizar_btn_primario(_btn_verificar)
+	_btn_verificar.mouse_entered.connect(func(): _escalar_btn(_btn_verificar, 1.04))
+	_btn_verificar.mouse_exited.connect(func(): _escalar_btn(_btn_verificar, 1.0))
+	_rec_paso2.add_child(_btn_verificar)
+	_btn_verificar.pressed.connect(_on_verificar_codigo_pressed)
+
+	var btn_reenviar := _btn_link("← Pedir otro código", Color(0.40, 0.72, 1.0))
+	_rec_paso2.add_child(btn_reenviar)
+	btn_reenviar.pressed.connect(func():
+		_rec_paso1.visible = true
+		_rec_paso2.visible = false
+		_msg(_msg_rec, "", Color.WHITE))
+
+	# ── Paso 3: contraseña nueva ─────────────────────────────────
+	_rec_paso3 = VBoxContainer.new()
+	_rec_paso3.add_theme_constant_override("separation", 10)
+	_rec_paso3.visible = false
+	vbox.add_child(_rec_paso3)
+
+	var desc3 := Label.new()
+	desc3.text = "Código verificado. Escribe tu contraseña nueva."
+	desc3.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc3.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc3.add_theme_color_override("font_color", Color(0.58, 0.75, 0.62))
+	desc3.add_theme_font_size_override("font_size", 12)
+	_rec_paso3.add_child(desc3)
+
+	_rec_pass_nueva     = _campo(_rec_paso3, "Contraseña nueva (mín. 6 caracteres)", true)
+	_rec_pass_confirmar = _campo(_rec_paso3, "Confirmar contraseña nueva", true)
+
+	_btn_cambiar = Button.new()
+	_btn_cambiar.text = "Cambiar contraseña"
+	_estilizar_btn_primario(_btn_cambiar)
+	_btn_cambiar.mouse_entered.connect(func(): _escalar_btn(_btn_cambiar, 1.04))
+	_btn_cambiar.mouse_exited.connect(func(): _escalar_btn(_btn_cambiar, 1.0))
+	_rec_paso3.add_child(_btn_cambiar)
+	_btn_cambiar.pressed.connect(_on_cambiar_pass_pressed)
 
 	var btn_volver_rec := _btn_link("← Volver al login", Color(0.40, 0.72, 1.0))
 	vbox.add_child(btn_volver_rec)
@@ -440,6 +513,15 @@ func _crear_panel_recuperacion() -> void:
 	_msg_rec = _make_msg(); vbox.add_child(_msg_rec)
 
 	add_child(_panel_rec)
+
+
+func _resetear_panel_recuperacion() -> void:
+	if is_instance_valid(_rec_paso1): _rec_paso1.visible = true
+	if is_instance_valid(_rec_paso2): _rec_paso2.visible = false
+	if is_instance_valid(_rec_paso3): _rec_paso3.visible = false
+	if is_instance_valid(_rec_codigo): _rec_codigo.text = ""
+	if is_instance_valid(_rec_pass_nueva): _rec_pass_nueva.text = ""
+	if is_instance_valid(_rec_pass_confirmar): _rec_pass_confirmar.text = ""
 
 
 # ════════════════════════════════════════════════════════════
@@ -540,8 +622,8 @@ func _on_registro_pressed() -> void:
 	var email    := _reg_email.text.strip_edges()
 	var pass_    := _reg_pass.text
 	var confirm_ := _reg_confirm.text
-	var carrera  := _reg_carrera.get_item_text(_reg_carrera.selected)
-	var semestre := _reg_semestre.selected + 1
+	var carrera   := _reg_carrera.get_item_text(_reg_carrera.selected)
+	var trimestre := _reg_trimestre.selected + 1
 
 	if nombre.is_empty() or cedula.is_empty() or email.is_empty() or pass_.is_empty():
 		_msg(_msg_reg, "Completa todos los campos obligatorios (*).", Color(0.98, 0.82, 0.12))
@@ -561,8 +643,8 @@ func _on_registro_pressed() -> void:
 	SupabaseManager.registrar(email, pass_, {
 		"nombre"  : nombre,
 		"cedula"  : cedula,
-		"carrera" : carrera,
-		"semestre": semestre
+		"carrera"   : carrera,
+		"trimestre" : trimestre
 	})
 
 
@@ -575,8 +657,32 @@ func _on_recuperar_pressed() -> void:
 		_msg(_msg_rec, "Correo no válido.", Color(0.98, 0.82, 0.12))
 		_shake(_panel_rec); return
 	_set_cargando(true)
-	_msg(_msg_rec, "Enviando correo...", Color(0.65, 0.90, 0.70))
+	_msg(_msg_rec, "Enviando código...", Color(0.65, 0.90, 0.70))
 	SupabaseManager.recuperar_contrasena(email)
+
+
+func _on_verificar_codigo_pressed() -> void:
+	var codigo := _rec_codigo.text.strip_edges()
+	if codigo.length() != 6:
+		_msg(_msg_rec, "El código tiene 6 dígitos.", Color(0.98, 0.82, 0.12))
+		_shake(_panel_rec); return
+	_set_cargando(true)
+	_msg(_msg_rec, "Verificando...", Color(0.65, 0.90, 0.70))
+	SupabaseManager.verificar_codigo_recuperacion(_rec_email.text.strip_edges(), codigo)
+
+
+func _on_cambiar_pass_pressed() -> void:
+	var nueva     := _rec_pass_nueva.text
+	var confirmar := _rec_pass_confirmar.text
+	if nueva.length() < 6:
+		_msg(_msg_rec, "La contraseña debe tener al menos 6 caracteres.", Color(0.98, 0.82, 0.12))
+		_shake(_panel_rec); return
+	if nueva != confirmar:
+		_msg(_msg_rec, "Las contraseñas no coinciden.", Color(0.98, 0.82, 0.12))
+		_shake(_panel_rec); return
+	_set_cargando(true)
+	_msg(_msg_rec, "Actualizando contraseña...", Color(0.65, 0.90, 0.70))
+	SupabaseManager.establecer_nueva_contrasena(nueva)
 
 
 # ════════════════════════════════════════════════════════════
@@ -622,17 +728,42 @@ func _en_registro_fallido(error: String) -> void:
 func _en_recuperacion_enviada() -> void:
 	_set_cargando(false)
 	_msg(_msg_rec,
-		"¡Correo enviado!\nRevisa tu bandeja y la carpeta de spam.",
+		"¡Código enviado!\nRevisa tu bandeja y la carpeta de spam.",
 		Color(0.28, 0.95, 0.45))
-	_btn_enviar.disabled = true
-	await get_tree().create_timer(5.0).timeout
-	if is_instance_valid(_btn_enviar): _btn_enviar.disabled = false
-	_cambiar_panel("login")
+	_rec_paso1.visible = false
+	_rec_paso2.visible = true
 
 
 func _en_recuperacion_fallida(error: String) -> void:
 	_set_cargando(false)
 	_msg(_msg_rec, error, Color(0.95, 0.30, 0.30))
+
+
+func _en_codigo_verificado() -> void:
+	_set_cargando(false)
+	_msg(_msg_rec, "", Color.WHITE)
+	_rec_paso2.visible = false
+	_rec_paso3.visible = true
+
+
+func _en_codigo_fallido(error: String) -> void:
+	_set_cargando(false)
+	_msg(_msg_rec, error, Color(0.95, 0.30, 0.30))
+	_shake(_panel_rec)
+
+
+func _en_contrasena_actualizada() -> void:
+	_set_cargando(false)
+	_msg(_msg_rec, "¡Contraseña actualizada! Ya puedes iniciar sesión.", Color(0.28, 0.95, 0.45))
+	await get_tree().create_timer(2.5).timeout
+	_resetear_panel_recuperacion()
+	_cambiar_panel("login")
+
+
+func _en_actualizar_contrasena_fallido(error: String) -> void:
+	_set_cargando(false)
+	_msg(_msg_rec, error, Color(0.95, 0.30, 0.30))
+	_shake(_panel_rec)
 
 
 func _en_error_red(mensaje: String) -> void:

@@ -14,6 +14,10 @@ signal registro_exitoso(datos: Dictionary)
 signal registro_fallido(error: String)
 signal recuperacion_enviada()
 signal recuperacion_fallida(error: String)
+signal codigo_verificado()
+signal codigo_fallido(error: String)
+signal contrasena_actualizada()
+signal actualizar_contrasena_fallido(error: String)
 signal modulos_cargados(lista: Array)
 signal progreso_cargado(lista: Array)
 signal progreso_guardado()
@@ -24,6 +28,11 @@ signal error_red(mensaje: String)
 var jwt_token      : String = ""
 var user_id        : String = ""
 var nombre_usuario : String = ""
+# Token de sesión temporal que devuelve /auth/v1/verify al canjear el
+# código de recuperación — deliberadamente separado de jwt_token para no
+# pisar una sesión normal si el flujo de recuperación se usa por error
+# mientras hay un usuario logueado.
+var _recovery_token : String = ""
 var _http          : HTTPRequest
 var _accion_actual : String = ""
 var _cola          : Array  = []   # Array[Dictionary] peticiones en espera
@@ -78,11 +87,38 @@ func registrar(email: String, contrasena: String, meta: Dictionary) -> void:
 	_encolar("registro", url, HTTPClient.METHOD_POST, _headers_anon(), body)
 
 
-# ── RECUPERAR CONTRASEÑA ──────────────────────────────────────
+# ── RECUPERAR CONTRASEÑA (3 pasos) ────────────────────────────
+# Paso 1: pide el código de 6 dígitos por correo. Supabase responde 200
+# aunque el correo no exista — a propósito, no delata qué correos están
+# registrados. La UI siempre debe mostrar el mismo mensaje sin importar
+# si el correo existe o no.
 func recuperar_contrasena(email: String) -> void:
 	var url  := SUPABASE_URL + "/auth/v1/recover"
 	var body := JSON.stringify({"email": email})
 	_encolar("recuperar", url, HTTPClient.METHOD_POST, _headers_anon(), body)
+
+
+# Paso 2: canjea el código de 6 dígitos por una sesión temporal.
+func verificar_codigo_recuperacion(email: String, codigo: String) -> void:
+	var url  := SUPABASE_URL + "/auth/v1/verify"
+	var body := JSON.stringify({"type": "recovery", "email": email, "token": codigo})
+	_encolar("verificar_codigo", url, HTTPClient.METHOD_POST, _headers_anon(), body)
+
+
+# Paso 3: fija la contraseña nueva con el token de la sesión temporal
+# del paso 2 (no con jwt_token — ver comentario en _recovery_token).
+func establecer_nueva_contrasena(nueva: String) -> void:
+	if _recovery_token.is_empty():
+		push_error("SupabaseManager: no hay token de recuperación activo — llamá verificar_codigo_recuperacion() primero.")
+		return
+	var url  := SUPABASE_URL + "/auth/v1/user"
+	var body := JSON.stringify({"password": nueva})
+	var hdrs := PackedStringArray([
+		"Content-Type: application/json",
+		"apikey: "               + SUPABASE_ANON_KEY,
+		"Authorization: Bearer " + _recovery_token
+	])
+	_encolar("nueva_contrasena", url, HTTPClient.METHOD_PUT, hdrs, body)
 
 
 # ── MÓDULOS ───────────────────────────────────────────────────
@@ -191,6 +227,8 @@ func _on_respuesta_http(result: int, code: int, _hdrs: PackedStringArray, body: 
 		"login"           : _procesar_login(code, datos)
 		"registro"        : _procesar_registro(code, datos)
 		"recuperar"       : _procesar_recuperar(code, datos)
+		"verificar_codigo": _procesar_verificar_codigo(code, datos)
+		"nueva_contrasena": _procesar_nueva_contrasena(code, datos)
 		"cargar_modulos"  : _procesar_modulos(code, datos)
 		"cargar_progreso" : _procesar_progreso(code, datos)
 		"guardar_progreso": _procesar_guardar(code)
@@ -221,11 +259,42 @@ func _procesar_registro(code: int, datos: Variant) -> void:
 		user_id   = usuario.get("id", "")
 		jwt_token = datos.get("access_token", "")   # vacío si requiere confirmar email
 		emit_signal("registro_exitoso", usuario)
+	elif code in [200, 201]:
+		# El servidor confirmó que la cuenta se creó (200/201) pero el
+		# cuerpo no se pudo leer como el JSON esperado — no es un fallo
+		# del registro, es un problema leyendo la respuesta. Antes esto
+		# caía al mensaje genérico de abajo ("No se pudo crear la
+		# cuenta"), que es falso en este caso: la cuenta sí se crea.
+		# Reproduce el síntoma reportado el 1-sep-2026 21:39.
+		emit_signal("registro_fallido",
+			"Tu cuenta se creó, pero no pudimos leer la respuesta del servidor. Probá iniciar sesión con tu correo y contraseña.")
 	else:
 		var msg : String = "No se pudo crear la cuenta."
 		if datos is Dictionary:
 			msg = datos.get("error_description", datos.get("msg", datos.get("message", msg)))
 		emit_signal("registro_fallido", msg)
+
+
+func _procesar_verificar_codigo(code: int, datos: Variant) -> void:
+	if code == 200 and datos is Dictionary and datos.has("access_token"):
+		_recovery_token = datos.get("access_token", "")
+		emit_signal("codigo_verificado")
+	else:
+		var msg : String = "Código incorrecto o vencido."
+		if datos is Dictionary:
+			msg = datos.get("error_description", datos.get("msg", msg))
+		emit_signal("codigo_fallido", msg)
+
+
+func _procesar_nueva_contrasena(code: int, datos: Variant) -> void:
+	if code in [200, 201]:
+		_recovery_token = ""
+		emit_signal("contrasena_actualizada")
+	else:
+		var msg : String = "No se pudo actualizar la contraseña."
+		if datos is Dictionary:
+			msg = datos.get("error_description", datos.get("msg", msg))
+		emit_signal("actualizar_contrasena_fallido", msg)
 
 
 func _procesar_recuperar(code: int, datos: Variant) -> void:
