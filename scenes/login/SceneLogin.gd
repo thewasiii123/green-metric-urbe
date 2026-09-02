@@ -717,11 +717,11 @@ func _en_login_exitoso(_datos: Dictionary) -> void:
 		get_tree().change_scene_to_file("res://scenes/mapa/scene_mapa_mundo.tscn"))
 
 
-func _en_login_fallido(error: String) -> void:
+func _en_login_fallido(error: String, error_code: String) -> void:
 	_set_cargando(false)
 	if _login_es_post_registro:
 		_login_es_post_registro = false
-		_resolver_login_post_registro_fallido(error)
+		_resolver_login_post_registro_fallido(error, error_code)
 		return
 	_msg(_msg_login, error, Color(0.95, 0.30, 0.30))
 	_shake(_center)
@@ -756,11 +756,11 @@ func _en_registro_fallido(error: String) -> void:
 # Falló el login automático post-registro. La cuenta se creó igual (el
 # signup devolvió 200) — nunca mostramos esto como error, y precargamos
 # el correo en el panel de login para que solo falte la contraseña.
-func _resolver_login_post_registro_fallido(error: String) -> void:
+func _resolver_login_post_registro_fallido(error: String, error_code: String) -> void:
 	var email := _reg_email.text.strip_edges().to_lower().replace(" ", "")
 	var msg   : String
 	var color : Color
-	if _es_error_correo_no_confirmado(error):
+	if _es_error_correo_no_confirmado(error, error_code):
 		msg   = "Cuenta creada. Te enviamos un correo para confirmarla. Confirmala y volvé a iniciar sesión acá."
 		color = Color(0.28, 0.95, 0.45)   # mismo verde de éxito que ya usa el formulario
 	else:
@@ -771,12 +771,16 @@ func _resolver_login_post_registro_fallido(error: String) -> void:
 	_msg(_msg_login, msg, color)
 
 
-# No pude verificar en vivo el texto exacto que devuelve Supabase para
-# "correo no confirmado" (sin acceso a Supabase en esta sesión) — cubre
-# las variantes conocidas de GoTrue. Si no matchea, cae al mensaje
-# genérico de _resolver_login_post_registro_fallido(), que es igual de
-# correcto (así lo pediste).
-func _es_error_correo_no_confirmado(error: String) -> bool:
+# Verificado en la documentación oficial de Supabase: el error de
+# /auth/v1/token?grant_type=password trae "error_code": "email_not_confirmed"
+# cuando la cuenta existe pero el correo no está confirmado — ese código
+# es la condición principal, tal como recomienda la doc (branchear por
+# código, no por mensaje, porque el texto cambia entre versiones).
+# El matching de texto queda solo como respaldo secundario, por si el
+# servidor no manda error_code (respuesta vieja o malformada).
+func _es_error_correo_no_confirmado(error: String, error_code: String) -> bool:
+	if error_code == "email_not_confirmed":
+		return true
 	var e := error.to_lower()
 	return e.contains("not confirmed") or e.contains("not_confirmed") or e.contains("confirm")
 

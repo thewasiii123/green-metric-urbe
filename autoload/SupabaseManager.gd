@@ -9,7 +9,10 @@ const SUPABASE_ANON_KEY: String = "sb_publishable_I7BlsHi98fLy-Yuq8NTtFQ_8tw6r44
 
 # ── Señales ──────────────────────────────────────────────────
 signal login_exitoso(datos: Dictionary)
-signal login_fallido(error: String)
+# error_code: el campo estable que documenta Supabase (ej. "email_not_confirmed")
+# para branchear por código en vez de por el texto de error, que cambia
+# entre versiones. "" si el servidor no lo mandó.
+signal login_fallido(error: String, error_code: String)
 signal registro_exitoso(datos: Dictionary)
 signal registro_sin_sesion()
 signal registro_fallido(error: String)
@@ -249,10 +252,12 @@ func _procesar_login(code: int, datos: Variant) -> void:
 		emit_signal("login_exitoso", user)
 	else:
 		var msg : String = "Credenciales incorrectas."
+		var error_code : String = ""
 		if datos is Dictionary:
+			error_code = str(datos.get("error_code", ""))
 			msg = datos.get("error_description",
 					datos.get("msg", datos.get("error_code", msg)))
-		emit_signal("login_fallido", msg)
+		emit_signal("login_fallido", msg, error_code)
 
 
 func _procesar_registro(code: int, datos: Variant, cuerpo_crudo: String, headers: PackedStringArray) -> void:
